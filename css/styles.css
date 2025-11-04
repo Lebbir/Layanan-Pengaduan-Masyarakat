@@ -1,120 +1,6 @@
-/* Reset and Base Styles */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-:root {
-    --primary-color: #0066CC;
-    --primary-hover: #0052A3;
-    --text-dark: #1A1A1A;
-    --text-gray: #666666;
-    --bg-light: #F8F9FA;
-    --bg-cream: #F5E6D3;
-    --card-bg: #FFFFFF;
-    --border-radius: 8px;
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-    line-height: 1.6;
-    color: var(--text-dark);
-    overflow-x: hidden;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-/* Navigation */
-.navbar {
-    background: white;
-    box-shadow: var(--shadow-sm);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    padding: 1rem 0;
-}
-
-.nav-wrapper {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 700;
-    font-size: 1.25rem;
-    color: var(--text-dark);
-}
-
-.logo svg {
-    border-radius: 4px;
-}
-
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-}
-
-.nav-links a {
-    text-decoration: none;
-    color: var(--text-dark);
-    font-weight: 500;
-    transition: color 0.3s;
-}
-
-.nav-links a:hover {
-    color: var(--primary-color);
-}
-
-.hamburger {
-    display: none;
-    flex-direction: column;
-    cursor: pointer;
-    gap: 4px;
-}
-
-.hamburger span {
-    width: 25px;
-    height: 3px;
-    background: var(--text-dark);
-    transition: 0.3s;
-}
-
-/* Buttons */
-.btn-primary {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: var(--border-radius);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-size: 1rem;
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-large {
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
-}
+/* ===================================
+   Landing Page Styles
+   =================================== */
 
 /* Hero Section */
 .hero {
@@ -173,13 +59,7 @@ body {
     margin-bottom: 1rem;
 }
 
-.section-subtitle {
-    text-align: center;
-    color: var(--text-gray);
-    font-size: 1.1rem;
-    max-width: 700px;
-    margin: 0 auto 3rem;
-}
+
 
 .features-grid {
     display: grid;
@@ -374,78 +254,8 @@ body {
     background: var(--bg-light);
 }
 
-/* Footer */
-.footer {
-    background: #1a1a1a;
-    color: white;
-    padding: 4rem 0 2rem;
-}
-
-.footer-content {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 3rem;
-    margin-bottom: 3rem;
-}
-
-.footer-column h4 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
-
-.footer-column p {
-    color: #cccccc;
-    line-height: 1.8;
-}
-
-.footer-column ul {
-    list-style: none;
-}
-
-.footer-column ul li {
-    margin-bottom: 0.5rem;
-}
-
-.footer-column ul li a {
-    color: #cccccc;
-    text-decoration: none;
-    transition: color 0.3s;
-}
-
-.footer-column ul li a:hover {
-    color: white;
-}
-
-.footer-bottom {
-    text-align: center;
-    padding-top: 2rem;
-    border-top: 1px solid #333;
-    color: #999;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
-    .nav-links {
-        position: fixed;
-        top: 70px;
-        left: -100%;
-        width: 100%;
-        background: white;
-        flex-direction: column;
-        padding: 2rem;
-        box-shadow: var(--shadow-lg);
-        transition: left 0.3s;
-        align-items: flex-start;
-    }
-
-    .nav-links.active {
-        left: 0;
-    }
-
-    .hamburger {
-        display: flex;
-    }
 
     .hero-content {
         grid-template-columns: 1fr;
@@ -468,11 +278,6 @@ body {
 
     .testimonials-grid {
         grid-template-columns: 1fr;
-    }
-
-    .footer-content {
-        grid-template-columns: 1fr;
-        gap: 2rem;
     }
 }
 

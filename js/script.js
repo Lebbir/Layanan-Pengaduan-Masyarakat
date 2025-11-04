@@ -1,19 +1,46 @@
+// Load Header and Footer Components
+async function loadComponent(elementId, componentPath) {
+    try {
+        const response = await fetch(componentPath);
+        const html = await response.text();
+        document.getElementById(elementId).innerHTML = html;
+    } catch (error) {
+        console.error(`Error loading component ${componentPath}:`, error);
+    }
+}
+
+// Load components when DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadComponent('header-placeholder', 'components/header.html');
+    await loadComponent('footer-placeholder', 'components/footer.html');
+    
+    // Initialize navigation after header is loaded
+    initializeNavigation();
+    
+    // Initialize other features
+    initializeAnimations();
+});
+
 // Mobile Navigation Toggle
-const hamburger = document.getElementById('hamburger');
-const navLinks = document.querySelector('.nav-links');
+function initializeNavigation() {
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.querySelector('.nav-links');
 
-hamburger.addEventListener('click', () => {
-    navLinks.classList.toggle('active');
-    hamburger.classList.toggle('active');
-});
+    if (hamburger && navLinks) {
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            hamburger.classList.toggle('active');
+        });
 
-// Close mobile menu when clicking on a link
-document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', () => {
-        navLinks.classList.remove('active');
-        hamburger.classList.remove('active');
-    });
-});
+        // Close mobile menu when clicking on a link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                hamburger.classList.remove('active');
+            });
+        });
+    }
+}
 
 // Smooth scrolling for anchor links
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -32,22 +59,22 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // Add animation on scroll
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
+function initializeAnimations() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
 
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
-    });
-}, observerOptions);
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
 
-// Observe elements for animation
-document.addEventListener('DOMContentLoaded', () => {
+    // Observe elements for animation
     const animatedElements = document.querySelectorAll('.feature-card, .preview-item, .testimonial-card');
     
     animatedElements.forEach(el => {
@@ -56,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
         observer.observe(el);
     });
-});
+}
 
 // Button click handlers (placeholders for future functionality)
 const ctaButtons = document.querySelectorAll('.btn-primary');
