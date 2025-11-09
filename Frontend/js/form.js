@@ -1,11 +1,28 @@
 // Load header and footer components
 async function loadComponents() {
     try {
-        // Determine the correct path based on current location
-        const basePath = window.location.pathname.includes('/pages/') ? '..' : '.';
+        // Get the repository name for GitHub Pages
+        const pathParts = window.location.pathname.split('/');
+        const repoName = pathParts[1]; // e.g., 'Layanan-Pengaduan-Masyarakat'
         
-        const headerResponse = await fetch(`${basePath}/components/header.html`);
-        const footerResponse = await fetch(`${basePath}/components/footer.html`);
+        // Check if we're on GitHub Pages or local
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        
+        let headerPath, footerPath;
+        
+        if (isGitHubPages) {
+            // GitHub Pages: use absolute path from repo root
+            headerPath = `/${repoName}/Frontend/components/header.html`;
+            footerPath = `/${repoName}/Frontend/components/footer.html`;
+        } else {
+            // Local: use relative path
+            const basePath = window.location.pathname.includes('/pages/') ? '..' : '.';
+            headerPath = `${basePath}/components/header.html`;
+            footerPath = `${basePath}/components/footer.html`;
+        }
+        
+        const headerResponse = await fetch(headerPath);
+        const footerResponse = await fetch(footerPath);
         
         if (headerResponse.ok) {
             const headerPlaceholder = document.getElementById('header-placeholder');
