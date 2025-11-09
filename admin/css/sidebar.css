@@ -1,4 +1,4 @@
-/* Sidebar Component */
+/* Sidebar */
 .sidebar {
     background: white;
     border-right: 1px solid #e8e8e8;
@@ -20,10 +20,9 @@
     gap: 0.75rem;
     font-weight: 700;
     font-size: 1.1rem;
-    color: var(--text-dark);
 }
 
-/* Sidebar Navigation */
+/* Navigation */
 .sidebar-nav {
     flex: 1;
     padding: 1rem 0;
@@ -37,9 +36,14 @@
     padding: 0.75rem 1.5rem;
     color: #666;
     text-decoration: none;
-    transition: all 0.3s;
+    transition: all 0.2s;
     font-weight: 500;
     font-size: 0.95rem;
+}
+
+.nav-item i {
+    width: 20px;
+    font-size: 1.1rem;
 }
 
 .nav-item:hover {
@@ -53,11 +57,7 @@
     border-right: 3px solid var(--primary-color);
 }
 
-.nav-item svg {
-    flex-shrink: 0;
-}
-
-/* Sidebar Footer */
+/* Footer */
 .sidebar-footer {
     padding: 1rem;
     border-top: 1px solid #e8e8e8;
@@ -77,28 +77,18 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
     font-size: 0.9rem;
-    flex-shrink: 0;
-}
-
-.profile-info {
-    flex: 1;
-    min-width: 0;
 }
 
 .profile-name {
     font-weight: 600;
     font-size: 0.9rem;
-    color: var(--text-dark);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .profile-role {
@@ -106,7 +96,7 @@
     color: #999;
 }
 
-/* Mobile Sidebar Toggle */
+/* Mobile */
 @media (max-width: 1024px) {
     .sidebar {
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
