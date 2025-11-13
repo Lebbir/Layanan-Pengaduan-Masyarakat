@@ -94,7 +94,17 @@ function initializeAnimations() {
 
 function initLaporanButton() {
     const applyButtonLapor = document.getElementById('Laporan');
+    const applyButtonLapor1 = document.getElementById('Laporan1');
     applyButtonLapor.addEventListener('click', (e) => {
+            // Don't follow the link if it's inside an anchor tag
+                if (!tokenExist) {
+                    window.location.href = 'pages/login.html';
+                    alert("Login/Register terlebih dahulu");
+                } else {
+                    window.location.href = 'pages/submit.html';
+                }
+        });
+    applyButtonLapor1.addEventListener('click', (e) => {
             // Don't follow the link if it's inside an anchor tag
                 if (!tokenExist) {
                     window.location.href = 'pages/login.html';

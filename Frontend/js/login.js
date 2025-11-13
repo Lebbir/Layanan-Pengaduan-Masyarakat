@@ -13,10 +13,17 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleBtn.textContent = type === "password" ? "Show" : "Hide";
     });
 
+    if (document.querySelector(".login-container")) {
+        initLoginButton();
+    }
 
-    form.addEventListener("submit", (e) => {
-        e.preventDefault();
+    // === Fungsi validasi email sederhana ===
+    function validateEmail(email) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+    }
 
+    function validateForm() {
         let valid = true;
         userError.textContent = "";
         passwordError.textContent = "";
@@ -39,21 +46,47 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (!valid) return;
+        return valid;
+    }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Signing In...";
+    function initLoginButton() {
+        if (form) {
+            form.addEventListener("submit", loginUser);
+        }
+    }
 
-        setTimeout(() => {
-            alert("Login berhasil! (Simulasi)");
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Sign In";
-            form.reset();
-        }, 1500);
-    });
+    async function loginUser(e) {
+        e.preventDefault();
+        
+        if (!validateForm()) {
+            return;
+        }
 
-    // === Fungsi validasi email sederhana ===
-    function validateEmail(email) {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email);
+        const email = userInput.value;
+        const password = passwordInput.value;
+
+        try{
+            const response = await fetch(`http://localhost:3000/api/warga/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email:email, password:password})
+        });
+
+        const data = await response.json();
+
+        if(data.success) {
+            localStorage.setItem("token", data.token);
+            alert("Login berhasil");
+            window.location.href = "../index.html";
+        } else {
+            alert('Login gagal ' + data.message);
+        }
+        } catch (error) {
+            console.error("Fetch error", error);
+            alert("Terjadi kesalahan. Silahkan coba lagi nanti.");
+        }
+        
     }
 });

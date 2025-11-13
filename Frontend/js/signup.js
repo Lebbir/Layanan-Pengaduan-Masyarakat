@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordMinLength = 8;
 
+    if (document.querySelector('.login-container')) {
+        initRegisterPage();
+    }
+
     function clearErrors() {
         [nameError, emailError, passwordError, confirmError].forEach(el => {
             if (el) el.textContent = '';
@@ -75,22 +79,64 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    form.addEventListener('submit', function (e) {
+    // form.addEventListener('submit', function (e) {
+    //     if (!validate()) {
+    //         e.preventDefault();
+    //         // focus first error field
+    //         const firstError = document.querySelector('.error:not(:empty)');
+    //         if (firstError) {
+    //             const field = firstError.previousElementSibling;
+    //             if (field && field.focus) field.focus();
+    //         }
+    //         return;
+    //     }
+
+    //     // At this point validation passed. If you have a backend endpoint,
+    //     // here is where you'd POST the form via fetch/AJAX or allow normal submit.
+    //     e.preventDefault();
+    //     // Demo behavior for now
+    //     alert('Akun berhasil terdaftar (demo). Hubungkan endpoint backend untuk penyimpanan nyata.');
+    // });
+
+    function initRegisterPage(){
+        if (form) {
+        form.addEventListener('submit', registerUser);
+        }
+    }
+    
+
+    async function registerUser(e) {
+        e.preventDefault();
+
         if (!validate()) {
-            e.preventDefault();
-            // focus first error field
-            const firstError = document.querySelector('.error:not(:empty)');
-            if (firstError) {
-                const field = firstError.previousElementSibling;
-                if (field && field.focus) field.focus();
-            }
             return;
         }
 
-        // At this point validation passed. If you have a backend endpoint,
-        // here is where you'd POST the form via fetch/AJAX or allow normal submit.
-        e.preventDefault();
-        // Demo behavior for now
-        alert('Akun berhasil terdaftar (demo). Hubungkan endpoint backend untuk penyimpanan nyata.');
-    });
+        const user_warga = nameInput.value;
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        try{
+            const response = await fetch(`http://localhost:3000/api/warga/register`, {
+                method: "POST",
+                headers: {
+                    "Content-type": "application/json",
+                },
+                body: JSON.stringify({ user_warga: user_warga, email: email, password: password})
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                localStorage.setItem("token", data.token);
+                alert("Akun berhasil dibuat");
+                window.location.href = "../pages/login.html";
+            } else {
+                alert("Pendaftaran gagal: " + data.message);
+            }
+        } catch (error) {
+            console.error("Fetch gagal", error);
+            alert("Terjadi kesalahan. Silahkan coba lagi nanti.");
+        }
+    }
 });
