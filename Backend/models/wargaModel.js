@@ -7,6 +7,6 @@ const wargaSchema = new mongoose.Schema({
     alamat:{type:String}
 },{minimize:false})
 
-const wargaModel = mongoose.models.warga || mongoose.model("warga", wargaSchema);
+const wargaModel = mongoose.models.warga || mongoose.model("warga", wargaSchema, "warga");
 
 export default wargaModel;
