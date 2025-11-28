@@ -19,7 +19,12 @@ const createLaporan = async (req, res) => {
         
         // Pastikan nama field di sini SAMA PERSIS dengan formData.append di Frontend
         const { warga_id, judul, deskripsi, kategori, lokasi } = req.body;
-        
+        console.log("--- DEBUG START ---");
+        // Kita intip 5 huruf depan kunci untuk memastikan ini kunci BARU
+        const key = process.env.GOOGLE_API_KEY || "KOSONG";
+        console.log("API Key terbaca:", key.substring(0, 5) + "..."); 
+        console.log("Model yang dipanggil: gemini-1.5-flash");
+        console.log("--- DEBUG END ---");
         // Validasi Sederhana
         if (!deskripsi) {
              console.warn("Peringatan: Deskripsi kosong, AI mungkin tidak bekerja maksimal.");
@@ -50,7 +55,9 @@ const createLaporan = async (req, res) => {
         try {
             // --- FITUR JSON MODE ---
             // Kita paksa Gemini agar output-nya PASTI JSON valid
-            const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash",
+                generationConfig: { responseMimeType: "application/json" }
+            });
 
             const prompt = `
             Analisis laporan warga berikut: "${deskripsi}"
