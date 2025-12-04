@@ -73,9 +73,15 @@ function initializeUserMenu() {
     const token = localStorage.getItem('token');
     const userMenu = document.getElementById('userMenu');
     const logoutBtn = document.getElementById('logoutBtn');
+    const profileLink = document.getElementById('profileLink');
 
     if (token && userMenu) {
         userMenu.style.display = 'block';
+
+        // Fix profile link untuk halaman submit (di folder pages)
+        if (profileLink) {
+            profileLink.href = 'profile.html';
+        }
 
         const userName = localStorage.getItem('user_name');
         if (userName) {
