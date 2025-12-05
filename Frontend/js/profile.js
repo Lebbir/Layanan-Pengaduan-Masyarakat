@@ -260,6 +260,7 @@ async function handleProfileUpdate(e) {
             // Update display name
             if (result.data) {
                 document.getElementById('displayName').textContent = result.data.user_warga;
+                document.getElementById('user_warga').textContent = result.data.user_warga;
             }
 
             // Reload profile data

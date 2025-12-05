@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import laporanModel from '../models/laporanModel.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-// Pastikan path import ini benar sesuai struktur foldermu
 import { uploadFiletoCloudinary } from '../services/driveServices.js'; 
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
@@ -17,14 +16,10 @@ const createLaporan = async (req, res) => {
         // 1. CEK INPUT DARI FRONTEND
         console.log("Body diterima:", req.body);
         
-        // Pastikan nama field di sini SAMA PERSIS dengan formData.append di Frontend
-        const { warga_id, judul, deskripsi, kategori, lokasi } = req.body;
-        console.log("--- DEBUG START ---");
+        const { warga_id, judul, deskripsi, kategori, lokasi, nama_warga } = req.body;
         // Kita intip 5 huruf depan kunci untuk memastikan ini kunci BARU
         const key = process.env.GOOGLE_API_KEY || "KOSONG";
         console.log("API Key terbaca:", key.substring(0, 5) + "..."); 
-        console.log("Model yang dipanggil: gemini-1.5-flash");
-        console.log("--- DEBUG END ---");
         // Validasi Sederhana
         if (!deskripsi) {
              console.warn("Peringatan: Deskripsi kosong, AI mungkin tidak bekerja maksimal.");
@@ -104,6 +99,7 @@ const createLaporan = async (req, res) => {
             // Simpan Kategori (Bisa dari User atau dari AI)
             // Prioritas: Kalau user pilih kategori, pakai itu. Kalau tidak, pakai AI.
             kategori: kategori, 
+            nama_warga: nama_warga,
             
             // Field Khusus AI
             kategori_ai: analisisAI.kategori,

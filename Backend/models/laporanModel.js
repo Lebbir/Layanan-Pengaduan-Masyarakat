@@ -9,6 +9,7 @@ const laporanSchema = new mongoose.Schema({
         required:true,
         unique:true
     },
+    nama_warga:{type:String,required:true},
     judul:{type:String,required:true},
     deskripsi:{type:String,required:true},
     lokasi:{type:String},
@@ -23,7 +24,20 @@ const laporanSchema = new mongoose.Schema({
     sentimen_ai:{type:String},
     keywords_ai:{type:[String]},
     createdAt:{type:Date,default:Date.now}
-},{minimize:false})
+},{
+    minimize:false,
+    timestamps:true,
+    toJSON:{virtuals:true},
+    toObject:{virtuals:true}
+});
+
+laporanSchema.virtual('tanggal_format').get(function(){
+    return this.createdAt.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    });
+});
 
 const laporanModel = mongoose.models.laporan || mongoose.model("laporan", laporanSchema, "laporan");
 

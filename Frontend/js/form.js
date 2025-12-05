@@ -302,6 +302,7 @@ function setupFormSubmit() {
         formData.append('deskripsi', document.getElementById('description').value.trim());
         formData.append('kategori', document.getElementById('category').value);
         formData.append('lokasi', document.getElementById('location').value.trim());
+        formData.append('nama_warga', localStorage.getItem('user_name'));
 
         const files = window.getUploadedFiles();
         if (files && files.length > 0) {
