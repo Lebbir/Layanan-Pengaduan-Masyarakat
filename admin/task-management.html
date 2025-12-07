@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management - Admin LaporDesa</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="../Frontend/css/base.css">
+    <!-- Admin Styles -->
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/table.css">
+    <link rel="stylesheet" href="css/task-management.css">
+</head>
+<body class="admin-layout">
+    <!-- Sidebar Component -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <i style="font-size: 1.5rem; color: #0066CC;"class="fa-solid fa-city"></i>
+                <span>LaporDesa</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i class="fa-solid fa-border-all"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="task-management.html" class="nav-item active">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Task Management</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="#settings" class="nav-item">
+                <i class="fa-solid fa-gear"></i>
+                <span>Settings</span>
+            </a>
+
+            <div class="admin-profile">
+                <div class="profile-avatar">AD</div>
+                <div class="profile-info">
+                    <div class="profile-name">Admin Desa</div>
+                    <div class="profile-role">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar Component -->
+        <header class="top-bar">
+            <h1 class="page-title">Task Management</h1>
+            
+            <div class="top-bar-actions">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="taskSearch" placeholder="Search tasks...">
+                </div>
+
+                <button class="notification-btn">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+
+                <button class="btn-primary" onclick="openAssignModal()">
+                    <i class="fa-solid fa-plus"></i>
+                    Assign Task
+                </button>
+            </div>
+        </header>
+
+        <!-- Task Stats -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-label">Total Tasks</span>
+                <div class="stat-value">45</div>
+            </div>
+
+            <div class="stat-card stat-pending">
+                <span class="stat-label">Belum Dikerjakan</span>
+                <div class="stat-value">18</div>
+            </div>
+
+            <div class="stat-card stat-progress">
+                <span class="stat-label">Dalam Proses</span>
+                <div class="stat-value">15</div>
+            </div>
+
+            <div class="stat-card stat-resolved">
+                <span class="stat-label">Selesai</span>
+                <div class="stat-value">12</div>
+            </div>
+        </section>
+
+        <!-- Task Board -->
+        <section class="task-board">
+            <!-- Column: Belum Dikerjakan -->
+            <div class="task-column">
+                <div class="column-header">
+                    <h3><i class="fa-solid fa-circle-pause"></i> Belum Dikerjakan</h3>
+                    <span class="task-count">18</span>
+                </div>
+                <div class="task-list" id="belumDikerjakan">
+                    <div class="task-card" draggable="true">
+                        <div class="task-header">
+                            <span class="task-id">#8214</span>
+                            <div class="task-priority priority-high">High</div>
+                        </div>
+                        <h4 class="task-title">Perbaikan Jalan Rusak</h4>
+                        <p class="task-description">Jalan di RT 05 rusak parah dan membahayakan pengendara</p>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Budi Santoso</span>
+                            </div>
+                            <div class="task-date">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span>Dec 4, 2025</span>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-icon" onclick="viewTask('8214')" title="View Details">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="editTask('8214')" title="Edit">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-icon btn-danger" onclick="deleteTask('8214')" title="Delete">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="task-card" draggable="true">
+                        <div class="task-header">
+                            <span class="task-id">#8212</span>
+                            <div class="task-priority priority-medium">Medium</div>
+                        </div>
+                        <h4 class="task-title">Ide Festival Desa</h4>
+                        <p class="task-description">Usulan untuk mengadakan festival budaya desa</p>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Siti Aminah</span>
+                            </div>
+                            <div class="task-date">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span>Dec 3, 2025</span>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-icon" onclick="viewTask('8212')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="editTask('8212')">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-icon btn-danger" onclick="deleteTask('8212')">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="task-card" draggable="true">
+                        <div class="task-header">
+                            <span class="task-id">#8210</span>
+                            <div class="task-priority priority-low">Low</div>
+                        </div>
+                        <h4 class="task-title">Sampah Tidak Diangkut</h4>
+                        <p class="task-description">Sampah di TPS sudah menumpuk 3 hari</p>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Ahmad Yusuf</span>
+                            </div>
+                            <div class="task-date">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span>Dec 2, 2025</span>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-icon" onclick="viewTask('8210')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="editTask('8210')">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-icon btn-danger" onclick="deleteTask('8210')">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column: Dalam Proses -->
+            <div class="task-column">
+                <div class="column-header">
+                    <h3><i class="fa-solid fa-spinner"></i> Dalam Proses</h3>
+                    <span class="task-count">15</span>
+                </div>
+                <div class="task-list" id="dalamProses">
+                    <div class="task-card" draggable="true">
+                        <div class="task-header">
+                            <span class="task-id">#8213</span>
+                            <div class="task-priority priority-high">High</div>
+                        </div>
+                        <h4 class="task-title">Lampu Jalan Mati</h4>
+                        <p class="task-description">Lampu jalan di Jl. Merdeka sudah mati 2 minggu</p>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Eko Prasetyo</span>
+                            </div>
+                            <div class="task-date">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span>Dec 5, 2025</span>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-icon" onclick="viewTask('8213')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="editTask('8213')">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-icon btn-danger" onclick="deleteTask('8213')">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="task-card" draggable="true">
+                        <div class="task-header">
+                            <span class="task-id">#8208</span>
+                            <div class="task-priority priority-medium">Medium</div>
+                        </div>
+                        <h4 class="task-title">Pengadaan Air Bersih</h4>
+                        <p class="task-description">Perlu penambahan fasilitas air bersih di RT 03</p>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Dewi Kartika</span>
+                            </div>
+                            <div class="task-date">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span>Dec 1, 2025</span>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-icon" onclick="viewTask('8208')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="editTask('8208')">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-icon btn-danger" onclick="deleteTask('8208')">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column: Selesai -->
+            <div class="task-column">
+                <div class="column-header">
+                    <h3><i class="fa-solid fa-circle-check"></i> Selesai</h3>
+                    <span class="task-count">12</span>
+                </div>
+                <div class="task-list" id="selesai">
+                    <div class="task-card" draggable="true">
+                        <div class="task-header">
+                            <span class="task-id">#8211</span>
+                            <div class="task-priority priority-high">High</div>
+                        </div>
+                        <h4 class="task-title">Masalah Keamanan Lingkungan</h4>
+                        <p class="task-description">Peningkatan keamanan dengan ronda malam</p>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Rudi Hartono</span>
+                            </div>
+                            <div class="task-date">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span>Nov 30, 2025</span>
+                            </div>
+                        </div>
+                        <div class="task-completion">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Completed on Dec 6, 2025</span>
+                        </div>
+                    </div>
+
+                    <div class="task-card" draggable="true">
+                        <div class="task-header">
+                            <span class="task-id">#8209</span>
+                            <div class="task-priority priority-medium">Medium</div>
+                        </div>
+                        <h4 class="task-title">Program Pelatihan Pemuda</h4>
+                        <p class="task-description">Pelatihan kewirausahaan untuk pemuda desa</p>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Linda Wijaya</span>
+                            </div>
+                            <div class="task-date">
+                                <i class="fa-solid fa-calendar"></i>
+                                <span>Nov 28, 2025</span>
+                            </div>
+                        </div>
+                        <div class="task-completion">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Completed on Dec 5, 2025</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Assign Task Modal -->
+    <div id="assignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Assign New Task</h2>
+                <button class="modal-close" onclick="closeAssignModal()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <form id="assignTaskForm" class="modal-body">
+                <div class="form-group">
+                    <label for="reportSelect">Select Report <span class="required">*</span></label>
+                    <select id="reportSelect" required>
+                        <option value="">Choose a report...</option>
+                        <option value="8214">8214 - Perbaikan Jalan Rusak</option>
+                        <option value="8213">8213 - Lampu Jalan Mati</option>
+                        <option value="8212">8212 - Ide Festival Desa</option>
+                        <option value="8211">8211 - Masalah Keamanan Lingkungan</option>
+                        <option value="8210">8210 - Sampah Tidak Diangkut</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="assigneeSelect">Assign To <span class="required">*</span></label>
+                    <select id="assigneeSelect" required>
+                        <option value="">Choose a person...</option>
+                        <option value="budi">Budi Santoso</option>
+                        <option value="siti">Siti Aminah</option>
+                        <option value="ahmad">Ahmad Yusuf</option>
+                        <option value="eko">Eko Prasetyo</option>
+                        <option value="dewi">Dewi Kartika</option>
+                        <option value="rudi">Rudi Hartono</option>
+                        <option value="linda">Linda Wijaya</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="prioritySelect">Priority <span class="required">*</span></label>
+                    <select id="prioritySelect" required>
+                        <option value="">Select priority...</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="dueDate">Due Date</label>
+                    <input type="date" id="dueDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="taskNotes">Additional Notes</label>
+                    <textarea id="taskNotes" rows="3" placeholder="Add any special instructions or notes..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="sendNotification" checked>
+                        <span>Send notification to assignee</span>
+                    </label>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeAssignModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        Assign Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Task Details Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Task Details</h2>
+                <button class="modal-close" onclick="closeViewModal()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-section">
+                    <div class="detail-header">
+                        <div>
+                            <span class="detail-id" id="viewTaskId">#8214</span>
+                            <span class="detail-priority priority-high" id="viewTaskPriority">High Priority</span>
+                        </div>
+                        <span class="detail-status badge badge-pending" id="viewTaskStatus">Belum Dikerjakan</span>
+                    </div>
+                    
+                    <h3 class="detail-title" id="viewTaskTitle">Perbaikan Jalan Rusak</h3>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label><i class="fa-solid fa-user"></i> Assigned To</label>
+                            <p id="viewTaskAssignee">Budi Santoso</p>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <label><i class="fa-solid fa-calendar"></i> Created Date</label>
+                            <p id="viewTaskCreated">December 4, 2025</p>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <label><i class="fa-solid fa-clock"></i> Due Date</label>
+                            <p id="viewTaskDue">December 10, 2025</p>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <label><i class="fa-solid fa-list"></i> Category</label>
+                            <p id="viewTaskCategory">Complaint</p>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-description">
+                        <label><i class="fa-solid fa-align-left"></i> Description</label>
+                        <p id="viewTaskDescription">Jalan di RT 05 rusak parah dan membahayakan pengendara. Terdapat beberapa lubang besar yang dapat menyebabkan kecelakaan. Perlu segera dilakukan perbaikan untuk keamanan warga.</p>
+                    </div>
+                    
+                    <div class="detail-notes">
+                        <label><i class="fa-solid fa-note-sticky"></i> Additional Notes</label>
+                        <p id="viewTaskNotes">Koordinasi dengan dinas PU untuk material perbaikan. Budget sudah disetujui.</p>
+                    </div>
+                    
+                    <div class="detail-attachments">
+                        <label><i class="fa-solid fa-paperclip"></i> Attachments</label>
+                        <div class="attachment-list" id="viewTaskAttachments">
+                            <a href="#" class="attachment-item">
+                                <i class="fa-solid fa-file-image"></i>
+                                <span>foto-jalan-rusak-1.jpg</span>
+                            </a>
+                            <a href="#" class="attachment-item">
+                                <i class="fa-solid fa-file-image"></i>
+                                <span>foto-jalan-rusak-2.jpg</span>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-timeline">
+                        <label><i class="fa-solid fa-timeline"></i> Activity Timeline</label>
+                        <div class="timeline-list">
+                            <div class="timeline-item">
+                                <div class="timeline-icon">
+                                    <i class="fa-solid fa-plus"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <strong>Task Created</strong>
+                                    <p>Task assigned to Budi Santoso</p>
+                                    <span class="timeline-date">Dec 4, 2025 - 09:30 AM</span>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-icon">
+                                    <i class="fa-solid fa-bell"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <strong>Notification Sent</strong>
+                                    <p>Email notification sent to assignee</p>
+                                    <span class="timeline-date">Dec 4, 2025 - 09:31 AM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeViewModal()">Close</button>
+                    <button type="button" class="btn-primary" onclick="openEditModalFromView()">
+                        <i class="fa-solid fa-pen"></i>
+                        Edit Task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Task</h2>
+                <button class="modal-close" onclick="closeEditModal()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <form id="editTaskForm" class="modal-body">
+                <input type="hidden" id="editTaskId">
+                
+                <div class="form-group">
+                    <label for="editTaskTitle">Task Title <span class="required">*</span></label>
+                    <input type="text" id="editTaskTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editTaskDescription">Description <span class="required">*</span></label>
+                    <textarea id="editTaskDescription" rows="4" required></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editAssigneeSelect">Assigned To <span class="required">*</span></label>
+                        <select id="editAssigneeSelect" required>
+                            <option value="budi">Budi Santoso</option>
+                            <option value="siti">Siti Aminah</option>
+                            <option value="ahmad">Ahmad Yusuf</option>
+                            <option value="eko">Eko Prasetyo</option>
+                            <option value="dewi">Dewi Kartika</option>
+                            <option value="rudi">Rudi Hartono</option>
+                            <option value="linda">Linda Wijaya</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editStatusSelect">Status <span class="required">*</span></label>
+                        <select id="editStatusSelect" required>
+                            <option value="belumDikerjakan">Belum Dikerjakan</option>
+                            <option value="dalamProses">Dalam Proses</option>
+                            <option value="selesai">Selesai</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editPrioritySelect">Priority <span class="required">*</span></label>
+                        <select id="editPrioritySelect" required>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editDueDate">Due Date</label>
+                        <input type="date" id="editDueDate">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editTaskNotes">Additional Notes</label>
+                    <textarea id="editTaskNotes" rows="3" placeholder="Add any special instructions or notes..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editSendNotification">
+                        <span>Notify assignee about changes</span>
+                    </label>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+    <script src="js/task-management.js"></script>
+</body>
+</html>
