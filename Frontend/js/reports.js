@@ -253,6 +253,22 @@ async function loadReports() {
     }
 }
 
+function sensorNama(nama) {
+    if (!nama) return 'Anonymous';
+
+    let parts = nama.split(" ");
+
+    let sensor = parts.map(kata => {
+        if (kata.length <= 2) {
+            return kata;
+        }
+
+        return kata[0] + '*'.repeat(kata.length - 1);
+    });
+
+    return sensor.join(" ");
+}
+
 // Render reports cards
 function renderReports(reports) {
     const reportsList = document.getElementById('reportsList');
@@ -315,7 +331,7 @@ function renderReports(reports) {
                 <div class="report-footer">
                     <div class="report-author">
                         <i class="fa-solid fa-user"></i>
-                        <span>${report.warga_id?.user_warga || 'Anonymous'}</span>
+                        <span>${sensorNama(report.warga_id?.user_warga) || 'Anonymous'}</span>
                     </div>
                     ${report.lokasi ? `
                         <div class="report-location">
