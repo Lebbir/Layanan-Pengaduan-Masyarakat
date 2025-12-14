@@ -19,6 +19,7 @@ const createLaporan = async (req, res) => {
         const { warga_id, judul, deskripsi, kategori, lokasi, nama_warga } = req.body;
 
         console.log("--- DEBUG START ---");
+        // membaca API key dari file environment
         const key = process.env.GOOGLE_API_KEY || "KOSONG";
         console.log("API Key terbaca:", key.substring(0, 5) + "...");
         console.log("Model yang dipanggil: gemini-2.5-flash");
@@ -28,6 +29,7 @@ const createLaporan = async (req, res) => {
             console.warn("Peringatan: Deskripsi kosong, AI mungkin tidak bekerja maksimal.");
         }
 
+        // Generate nomor laporan
         let nomor_laporan = await generateNomorLaporan();
         let fileLinkGambar = "";
 
@@ -92,10 +94,10 @@ const createLaporan = async (req, res) => {
             lokasi,
             gambar: fileLinkGambar,
 
-            // User pilih kategori > AI hanya membantu
+            // Pengguna memilih jenis laporan
             kategori,
             nama_warga,
-
+            // Hasil dari AI
             kategori_ai: analisisAI.kategori,
             sentimen_ai: analisisAI.sentimen,
             keywords_ai: analisisAI.keywords,

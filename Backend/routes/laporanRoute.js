@@ -17,7 +17,7 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-// User routes
+// Membuat laporan baru
 laporanRouter.post("/buatlaporan", upload.single("upload_foto"), createLaporan)
 
 // Public routes (for transparent public view)
