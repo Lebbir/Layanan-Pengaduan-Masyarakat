@@ -47,6 +47,11 @@ LaporDesa adalah platform digital untuk menyalurkan keluhan dan aspirasi warga d
 ### Prerequisites
 - Web Browser (Chrome, Firefox, Safari, Edge)
 - Text Editor (VS Code, Sublime Text, dll)
+- 
+### running backend
+```bash
+npm run dev
+```
 
 ### Instalasi
 
