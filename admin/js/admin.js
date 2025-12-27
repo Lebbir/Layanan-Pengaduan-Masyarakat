@@ -123,4 +123,16 @@ function initClickHandlers() {
     });
 }
 
+// Logout Function
+function logout() {
+    if (confirm('Apakah Anda yakin ingin keluar?')) {
+        // Clear any stored session/token
+        localStorage.removeItem('adminToken');
+        sessionStorage.clear();
+        
+        // Redirect to login page
+        window.location.href = 'login.html';
+    }
+}
+
 console.log('Admin Panel loaded');
