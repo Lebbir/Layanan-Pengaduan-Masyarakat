@@ -153,6 +153,80 @@
     margin-bottom: 0.5rem;
 }
 
+.file-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.file-thumb {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.pdf-preview {
+    width: 140px;
+    height: 100px;
+    display: block;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+}
+
+.pdf-preview object,
+.pdf-preview iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* PDF modal preview */
+.pdf-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.75);
+    z-index: 10050;
+}
+
+.pdf-modal-content {
+    width: 95%;
+    max-width: 1100px;
+    height: 90vh;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.pdf-modal-body {
+    flex: 1 1 auto;
+    background: #333;
+}
+
+.pdf-modal-body object,
+.pdf-modal-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
 .file-info {
     display: flex;
     align-items: center;

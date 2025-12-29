@@ -36,14 +36,18 @@ const createLaporan = async (req, res) => {
     let nomor_laporan = await generateNomorLaporan();
     let fileLinkGambar = "";
 
-    // Upload gambar
+    // Upload handling: multer.single provides req.file
     if (req.file) {
-      console.log("File diterima, mulai upload Cloudinary...");
+      const fileSizeMB = (req.file.size / (1024 * 1024)).toFixed(2);
+      console.log(
+        `[File Upload] Image - ${req.file.originalname} (${fileSizeMB}MB)`
+      );
       try {
         fileLinkGambar = await uploadFiletoCloudinary(req.file);
-        console.log("Upload sukses:", fileLinkGambar);
+        console.log(`[File Upload] ✓ Berhasil di-upload ke: ${fileLinkGambar}`);
       } catch (uploadError) {
-        console.error("Gagal upload gambar:", uploadError);
+        console.error(`[File Upload] ✗ Error: ${uploadError.message}`);
+        fileLinkGambar = "";
       }
     }
 
@@ -95,7 +99,6 @@ const createLaporan = async (req, res) => {
       deskripsi,
       lokasi,
       gambar: fileLinkGambar,
-
       // Pengguna memilih jenis laporan
       kategori,
       nama_warga,
@@ -103,7 +106,6 @@ const createLaporan = async (req, res) => {
       kategori_ai: analisisAI.kategori,
       sentimen_ai: analisisAI.sentimen,
       keywords_ai: analisisAI.keywords,
-
       status_laporan: "Belum dikerjakan",
     });
 
@@ -147,8 +149,9 @@ const getPublicLaporan = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const sortOrder = order === "desc" ? -1 : 1;
 
-    const laporan = await laporanModel
+    let laporan = await laporanModel
       .find(query)
+      .select("-pdf_data")
       .populate("warga_id", "user_warga")
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
@@ -197,7 +200,7 @@ const getAllLaporan = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 10,
+      limit = 9,
       status,
       kategori,
       search,
@@ -221,8 +224,9 @@ const getAllLaporan = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const sortOrder = order === "desc" ? -1 : 1;
 
-    const laporan = await laporanModel
+    let laporan = await laporanModel
       .find(query)
+      .select("-pdf_data")
       .populate("warga_id", "user_warga email no_hp alamat")
       .sort({ [sortBy]: sortOrder })
       .skip(skip)

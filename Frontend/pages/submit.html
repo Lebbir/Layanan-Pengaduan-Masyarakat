@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="../css/footer.css">
     <!-- Form Styles -->
     <link rel="stylesheet" href="../css/form.css">
+    <link rel="icon" type="image/png" href="img/67fdchchgc.png">
 </head>
 
 <body>
@@ -66,12 +67,12 @@
 
                 <!-- Lampirkan File -->
                 <div class="form-group">
-                    <label for="fileUpload">Lampirkan File (Opsional)</label>
+                    <label for="fileUpload">Lampirkan Gambar (Opsional)</label>
                     <div class="file-upload-area" id="fileUploadArea">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                         <p class="upload-text">Klik untuk unggah atau seret dan lepas</p>
-                        <p class="upload-hint">PNG, JPG, PDF (MAX. 5MB)</p>
-                        <input type="file" id="fileUpload" name="file" accept=".png,.jpg,.jpeg,.pdf" hidden>
+                        <p class="upload-hint">PNG, JPG, GIF, WEBP (MAX. 5MB)</p>
+                        <input type="file" id="fileUpload" name="file" accept=".png,.jpg,.jpeg,.gif,.webp" hidden>
                     </div>
                     <div id="filePreview" class="file-preview"></div>
                 </div>
@@ -85,7 +86,7 @@
 
                 <!-- Form Actions -->
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="window.history.back()">Batal</button>
+                    <button type="button" class="btn-secondary btn-back">Batal</button>
                     <button type="submit" class="btn-primary btn-large">
                         <i class="fa-solid fa-paper-plane"></i>
                         Kirim Laporan

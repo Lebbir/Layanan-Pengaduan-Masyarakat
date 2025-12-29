@@ -1,59 +1,114 @@
 // Reports Page - Public Transparency
 const API_URL = "http://localhost:3000/api/laporan";
 
-let currentPage = 1;
-let currentFilters = {
-  search: "",
-  kategori: "",
-  status: "",
-  sortBy: "createdAt",
-  order: "desc",
+// State management
+const state = {
+  currentPage: 1,
+  filters: {
+    search: "",
+    kategori: "",
+    status: "",
+    sortBy: "createdAt",
+    order: "desc",
+  },
+  pendingSearch: "",
+  searchTimeout: null,
+};
+
+// Status mapping
+const STATUS_MAP = {
+  pending: "Belum dikerjakan",
+  "in progress": "Sedang dikerjakan",
+  completed: "Selesai",
+};
+
+// DOM Elements
+const domElements = {
+  searchInput: null,
+  filterKategori: null,
+  filterStatus: null,
+  filterSort: null,
+  btnApplyFilter: null,
+  btnResetFilter: null,
+  reportsList: null,
+  paginationContainer: null,
 };
 
 // Initialize page
 document.addEventListener("DOMContentLoaded", () => {
-  loadComponents();
-  setupEventListeners();
-  loadStatistics();
-  loadReports();
+  initializeApp();
 });
+
+async function initializeApp() {
+  try {
+    await loadComponents();
+    initializeDOMReferences();
+    setupEventListeners();
+    await loadStatistics();
+    await loadReports();
+  } catch (error) {
+    console.error("Error initializing app:", error);
+    showErrorState("Gagal memuat aplikasi");
+  }
+}
 
 // Load header and footer components
 async function loadComponents() {
   try {
-    const headerResponse = await fetch("../components/header.html");
-    const headerHtml = await headerResponse.text();
-    document.getElementById("header-placeholder").innerHTML = headerHtml;
+    const [headerResponse, footerResponse] = await Promise.all([
+      fetch("../components/header.html"),
+      fetch("../components/footer.html"),
+    ]);
 
-    const footerResponse = await fetch("../components/footer.html");
-    const footerHtml = await footerResponse.text();
+    if (!headerResponse.ok || !footerResponse.ok) {
+      throw new Error("Failed to load components");
+    }
+
+    const [headerHtml, footerHtml] = await Promise.all([
+      headerResponse.text(),
+      footerResponse.text(),
+    ]);
+
+    document.getElementById("header-placeholder").innerHTML = headerHtml;
     document.getElementById("footer-placeholder").innerHTML = footerHtml;
 
-    // Initialize header functionality
     setupHeaderNavigation();
   } catch (error) {
     console.error("Error loading components:", error);
+    // Fallback: Show minimal navigation
+    document.getElementById("header-placeholder").innerHTML = `
+      <header>Layanan Pengaduan</header>
+    `;
   }
+}
+
+// Initialize DOM element references
+function initializeDOMReferences() {
+  domElements.searchInput = document.getElementById("searchInput");
+  domElements.filterKategori = document.getElementById("filterKategori");
+  domElements.filterStatus = document.getElementById("filterStatus");
+  domElements.filterSort = document.getElementById("filterSort");
+  domElements.btnApplyFilter = document.getElementById("btnApplyFilter");
+  domElements.btnResetFilter = document.getElementById("btnResetFilter");
+  domElements.reportsList = document.getElementById("reportsList");
+  domElements.paginationContainer = document.getElementById(
+    "paginationContainer"
+  );
 }
 
 // Setup header navigation for reports page
 function setupHeaderNavigation() {
+  // Delay to ensure DOM is ready
   setTimeout(() => {
-    // Fix navigation links to go back to index.html
     const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
     navLinks.forEach((link) => {
       const href = link.getAttribute("href");
-      if (
-        href === "#beranda" ||
-        href === "#cara-kerja" ||
-        href === "#fitur" ||
-        href === "#kontak"
-      ) {
-        link.setAttribute("href", "../index.html" + href);
+      if (["#beranda", "#cara-kerja", "#fitur", "#kontak"].includes(href)) {
+        link.setAttribute("href", `../index.html${href}`);
       }
     });
 
-    // Fix "Daftar Pengaduan" link to stay on current page
+    // Mark reports link as active
     const reportsLink = document.querySelector(
       '.nav-links a[href*="reports.html"]'
     );
@@ -62,33 +117,21 @@ function setupHeaderNavigation() {
       reportsLink.classList.add("active");
     }
 
-    // Fix "Buat Laporan" button
+    // Setup "Buat Laporan" button
     const buatLaporanBtn = document.getElementById("buatLaporanBtn");
     if (buatLaporanBtn) {
-      buatLaporanBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem("token");
-        if (token) {
-          window.location.href = "submit.html";
-        } else {
-          window.location.href = "login.html";
-        }
-      });
+      buatLaporanBtn.addEventListener("click", handleBuatLaporanClick);
     }
 
-    // Initialize user menu
     initializeUserMenu();
-
-    // Mobile hamburger menu
-    const hamburger = document.getElementById("hamburger");
-    const navLinksContainer = document.querySelector(".nav-links");
-    if (hamburger && navLinksContainer) {
-      hamburger.addEventListener("click", () => {
-        navLinksContainer.classList.toggle("active");
-        hamburger.classList.toggle("active");
-      });
-    }
+    setupMobileMenu();
   }, 100);
+}
+
+function handleBuatLaporanClick(e) {
+  e.preventDefault();
+  const token = localStorage.getItem("token");
+  window.location.href = token ? "submit.html" : "login.html";
 }
 
 // Initialize user menu (profile dropdown and logout)
@@ -96,474 +139,525 @@ function initializeUserMenu() {
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("user_name");
   const userMenu = document.getElementById("userMenu");
+
+  if (!token || !userName || !userMenu) return;
+
+  userMenu.style.display = "flex";
+  const userNameSpan = document.getElementById("userName");
+  if (userNameSpan) {
+    userNameSpan.textContent = userName;
+  }
+
+  setupDropdown();
+  setupProfileNavigation();
+  setupLogout();
+}
+
+function setupDropdown() {
   const profileBtn = document.getElementById("profileBtn");
   const dropdownMenu = document.getElementById("dropdownMenu");
+
+  if (!profileBtn || !dropdownMenu) return;
+
+  profileBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dropdownMenu.classList.toggle("show");
+  });
+
+  document.addEventListener("click", (e) => {
+    const userMenu = document.getElementById("userMenu");
+    if (userMenu && !userMenu.contains(e.target)) {
+      dropdownMenu.classList.remove("show");
+    }
+  });
+}
+
+function setupProfileNavigation() {
   const profileLink = document.getElementById("profileLink");
+  if (profileLink) {
+    profileLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.href = "profile.html";
+    });
+  }
+}
+
+function setupLogout() {
   const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (confirm("Apakah Anda yakin ingin keluar?")) {
+        clearUserSession();
+        window.location.href = "../index.html";
+      }
+    });
+  }
+}
 
-  if (token && userName && userMenu) {
-    userMenu.style.display = "flex";
-    const userNameSpan = document.getElementById("userName");
-    if (userNameSpan) {
-      userNameSpan.textContent = userName;
-    }
+function clearUserSession() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user_name");
+  localStorage.removeItem("user_id");
+}
 
-    // Toggle dropdown
-    if (profileBtn && dropdownMenu) {
-      profileBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        dropdownMenu.classList.toggle("show");
-      });
+function setupMobileMenu() {
+  const hamburger = document.getElementById("hamburger");
+  const navLinksContainer = document.querySelector(".nav-links");
 
-      // Close dropdown when clicking outside
-      document.addEventListener("click", (e) => {
-        if (!userMenu.contains(e.target)) {
-          dropdownMenu.classList.remove("show");
-        }
-      });
-    }
-
-    // Profile link
-    if (profileLink) {
-      profileLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        window.location.href = "profile.html";
-      });
-    }
-
-    // Logout
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        if (confirm("Apakah Anda yakin ingin keluar?")) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user_name");
-          localStorage.removeItem("user_id");
-          window.location.href = "../index.html";
-        }
-      });
-    }
+  if (hamburger && navLinksContainer) {
+    hamburger.addEventListener("click", () => {
+      navLinksContainer.classList.toggle("active");
+      hamburger.classList.toggle("active");
+    });
   }
 }
 
 // Setup event listeners
 function setupEventListeners() {
-  const searchInput = document.getElementById("searchInput");
-  const filterKategori = document.getElementById("filterKategori");
-  const filterStatus = document.getElementById("filterStatus");
-  const filterSort = document.getElementById("filterSort");
-  const btnApplyFilter = document.getElementById("btnApplyFilter");
-  const btnResetFilter = document.getElementById("btnResetFilter");
-
-  // Real-time search with debounce
-  // Search input: store value but do NOT trigger search automatically.
-  // User must click "Terapkan" to apply filters.
-  let searchTimeout;
-  let pendingSearch = "";
-  searchInput.addEventListener("input", (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      pendingSearch = e.target.value;
-    }, 300);
-  });
+  // Search input with debounce
+  domElements.searchInput.addEventListener("input", handleSearchInput);
 
   // Apply filters button
-  btnApplyFilter.addEventListener("click", () => {
-    // Apply pending search and selected filters
-    currentFilters.search = (pendingSearch || searchInput.value || "").trim();
-    currentFilters.kategori = filterKategori.value;
-    currentFilters.status = filterStatus.value;
-
-    const [sortBy, order] = filterSort.value.split("-");
-    currentFilters.sortBy = sortBy;
-    currentFilters.order = order;
-
-    currentPage = 1;
-    loadReports();
-  });
+  domElements.btnApplyFilter.addEventListener("click", applyFilters);
 
   // Reset filters button
-  btnResetFilter.addEventListener("click", () => {
-    searchInput.value = "";
-    filterKategori.value = "";
-    filterStatus.value = "";
-    filterSort.value = "createdAt-desc";
+  domElements.btnResetFilter.addEventListener("click", resetFilters);
 
-    // clear pending search and reset filters
-    pendingSearch = "";
-    currentFilters = {
-      search: "",
-      kategori: "",
-      status: "",
-      sortBy: "createdAt",
-      order: "desc",
-    };
+  // Set up delegated event listener for report cards
+  setupDelegatedEventListeners();
+}
 
-    currentPage = 1;
-    loadReports();
-  });
+function handleSearchInput(e) {
+  clearTimeout(state.searchTimeout);
+  state.searchTimeout = setTimeout(() => {
+    state.pendingSearch = e.target.value.trim();
+  }, 300);
+}
+
+function applyFilters() {
+  state.filters.search =
+    state.pendingSearch || domElements.searchInput.value.trim();
+  state.filters.kategori = domElements.filterKategori.value;
+  state.filters.status = domElements.filterStatus.value;
+
+  const [sortBy, order] = domElements.filterSort.value.split("-");
+  state.filters.sortBy = sortBy;
+  state.filters.order = order;
+
+  state.currentPage = 1;
+  loadReports();
+}
+
+function resetFilters() {
+  domElements.searchInput.value = "";
+  domElements.filterKategori.value = "";
+  domElements.filterStatus.value = "";
+  domElements.filterSort.value = "createdAt-desc";
+
+  state.pendingSearch = "";
+  state.filters = {
+    search: "",
+    kategori: "",
+    status: "",
+    sortBy: "createdAt",
+    order: "desc",
+  };
+
+  state.currentPage = 1;
+  loadReports();
+}
+
+function setupDelegatedEventListeners() {
+  // Report card clicks
+  if (domElements.reportsList && !domElements.reportsList._delegationSet) {
+    domElements.reportsList.addEventListener("click", handleReportCardClick);
+    domElements.reportsList._delegationSet = true;
+  }
+
+  // Pagination clicks
+  if (
+    domElements.paginationContainer &&
+    !domElements.paginationContainer._paginationHandlerSet
+  ) {
+    domElements.paginationContainer.addEventListener(
+      "click",
+      handlePaginationClick
+    );
+    domElements.paginationContainer._paginationHandlerSet = true;
+  }
+}
+
+function handleReportCardClick(e) {
+  const card = e.target.closest(".report-card");
+  if (!card) return;
+
+  const id = card.getAttribute("data-id");
+  if (
+    id &&
+    (e.target.closest(".btn-detail") ||
+      e.target === card ||
+      card.contains(e.target))
+  ) {
+    viewDetail(id);
+  }
+}
+
+function handlePaginationClick(e) {
+  const btn = e.target.closest(".btn-page");
+  if (!btn || btn.disabled) return;
+
+  const targetPage = parseInt(btn.getAttribute("data-page"), 10);
+  if (!isNaN(targetPage)) changePage(targetPage);
 }
 
 // Load statistics
 async function loadStatistics() {
   try {
     const response = await fetch(`${API_URL}/statistics`);
-    const result = await response.json();
+    if (!response.ok) throw new Error("Failed to fetch statistics");
 
+    const result = await response.json();
     if (result.success) {
-      const stats = result.data;
-      document.getElementById("statTotal").textContent = stats.total;
-      document.getElementById("statPending").textContent =
-        stats.byStatus.pending;
-      document.getElementById("statProgress").textContent =
-        stats.byStatus.inProgress;
-      document.getElementById("statCompleted").textContent =
-        stats.byStatus.completed;
+      updateStatisticsUI(result.data);
     }
   } catch (error) {
     console.error("Error loading statistics:", error);
   }
 }
 
+function updateStatisticsUI(stats) {
+  const elements = {
+    total: document.getElementById("statTotal"),
+    pending: document.getElementById("statPending"),
+    progress: document.getElementById("statProgress"),
+    completed: document.getElementById("statCompleted"),
+  };
+
+  for (const [key, element] of Object.entries(elements)) {
+    if (element) {
+      if (key === "total") {
+        element.textContent = stats.total || 0;
+      } else {
+        // Ensure we always display 0 if status count is undefined or missing
+        element.textContent = (stats.byStatus && stats.byStatus[key]) || 0;
+      }
+    }
+  }
+}
+
 // Load reports
 async function loadReports() {
+  showLoadingState();
+
   try {
-    const reportsList = document.getElementById("reportsList");
-    reportsList.innerHTML = `
-            <div class="loading-state">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-                <p>Memuat data laporan...</p>
-            </div>
-        `;
-
-    // Fetch all reports from server (client-side filtering/sorting/pagination)
-    const FETCH_LIMIT = 10000; // large enough to fetch all items; adjust if needed
-    const params = new URLSearchParams({ page: 1, limit: FETCH_LIMIT });
-
-    const response = await fetch(`${API_URL}/public?${params}`);
-    const result = await response.json();
-
-    if (result.success) {
-      const allReports = Array.isArray(result.data) ? result.data : [];
-
-      // Apply client-side filters, sorting and pagination
-      const filtered = applyClientFilters(allReports);
-
-      const total = filtered.length;
-      const limit = 9;
-      const totalPages = Math.max(1, Math.ceil(total / limit));
-      // Ensure currentPage is within range
-      if (currentPage > totalPages) currentPage = totalPages;
-      if (currentPage < 1) currentPage = 1;
-
-      const start = (currentPage - 1) * limit;
-      const pageReports = filtered.slice(start, start + limit);
-
-      renderReports(pageReports);
-      renderPagination({ page: currentPage, totalPages, total });
-    } else {
-      reportsList.innerHTML = `
-                <div class="empty-state">
-                    <i class="fa-solid fa-inbox"></i>
-                    <p>Gagal memuat data</p>
-                </div>
-            `;
-    }
+    const allReports = await fetchAllReports();
+    const filteredReports = applyClientFilters(allReports);
+    renderReportsWithPagination(filteredReports);
   } catch (error) {
     console.error("Error loading reports:", error);
-    document.getElementById("reportsList").innerHTML = `
-            <div class="error-state">
-                <i class="fa-solid fa-exclamation-triangle"></i>
-                <p>Terjadi kesalahan saat memuat data</p>
-            </div>
-        `;
+    showErrorState("Terjadi kesalahan saat memuat data");
   }
+}
+
+async function fetchAllReports() {
+  const FETCH_LIMIT = 10000;
+  const params = new URLSearchParams({ page: 1, limit: FETCH_LIMIT });
+
+  const response = await fetch(`${API_URL}/public?${params}`);
+  if (!response.ok) throw new Error("Failed to fetch reports");
+
+  const result = await response.json();
+  return result.success ? (Array.isArray(result.data) ? result.data : []) : [];
+}
+
+function showLoadingState() {
+  domElements.reportsList.innerHTML = `
+    <div class="loading-state">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      <p>Memuat data laporan...</p>
+    </div>
+  `;
+}
+
+function showErrorState(message) {
+  domElements.reportsList.innerHTML = `
+    <div class="error-state">
+      <i class="fa-solid fa-exclamation-triangle"></i>
+      <p>${message}</p>
+    </div>
+  `;
 }
 
 // Apply client-side filtering and sorting
 function applyClientFilters(reports) {
   if (!Array.isArray(reports)) return [];
 
-  console.log("applyClientFilters called with", reports.length, "reports");
-  console.log("currentFilters:", currentFilters);
+  let filtered = [...reports];
 
-  const statusMap = {
-    pending: "Belum dikerjakan",
-    "in progress": "Sedang dikerjakan",
-    completed: "Selesai",
-  };
-
-  let res = reports.slice();
-
-  // Search (title or description)
-  const q = (currentFilters.search || "").trim().toLowerCase();
-  if (q) {
-    console.log("Filtering by search:", q);
-    res = res.filter((r) => {
-      const title = (r.judul || "").toLowerCase();
-      const desc = (r.deskripsi || "").toLowerCase();
-      return title.includes(q) || desc.includes(q);
+  // Apply search filter
+  if (state.filters.search) {
+    const query = state.filters.search.toLowerCase();
+    filtered = filtered.filter((report) => {
+      const title = (report.judul || "").toLowerCase();
+      const description = (report.deskripsi || "").toLowerCase();
+      return title.includes(query) || description.includes(query);
     });
-    console.log("After search filter:", res.length, "items");
   }
 
-  // Category
-  if (currentFilters.kategori) {
-    const cat = (currentFilters.kategori || "").trim().toLowerCase();
-    console.log("Filtering by kategori:", cat);
-    const beforeCount = res.length;
-    // Prefer AI-assigned category (`kategori_ai`) if available, otherwise use user category (`kategori`)
-    res = res.filter((r) => {
-      const dbKat = ((r.kategori_ai && r.kategori_ai) || r.kategori || "")
+  // Apply category filter
+  if (state.filters.kategori) {
+    const category = state.filters.kategori.toLowerCase();
+    filtered = filtered.filter((report) => {
+      const reportCategory = (
+        (report.kategori_ai && report.kategori_ai) ||
+        report.kategori ||
+        ""
+      )
         .trim()
         .toLowerCase();
-      return dbKat === cat;
+      return reportCategory === category;
     });
-    console.log(
-      "After kategori filter:",
-      res.length,
-      "items (was",
-      beforeCount,
-      ")"
-    );
   }
 
-  // Status
-  if (currentFilters.status) {
-    console.log("Filtering by status:", currentFilters.status);
-    const mapped = statusMap[currentFilters.status] || currentFilters.status;
-    const beforeCount = res.length;
-    res = res.filter(
-      (r) =>
-        (r.status_laporan || "").trim().toLowerCase() ===
-        mapped.trim().toLowerCase()
-    );
-    console.log(
-      "After status filter:",
-      res.length,
-      "items (was",
-      beforeCount,
-      ")"
-    );
+  // Apply status filter
+  if (state.filters.status) {
+    const targetStatus =
+      STATUS_MAP[state.filters.status] || state.filters.status;
+    filtered = filtered.filter((report) => {
+      const reportStatus = (report.status_laporan || "").trim().toLowerCase();
+      return reportStatus === targetStatus.toLowerCase();
+    });
   }
 
-  // Sorting
-  const sortBy = currentFilters.sortBy || "createdAt";
-  const order = currentFilters.order || "desc";
-  console.log("Sorting by:", sortBy, "order:", order);
+  // Apply sorting
+  filtered.sort((a, b) => {
+    const { sortBy, order } = state.filters;
 
-  res.sort((a, b) => {
     if (sortBy === "judul") {
-      const va = (a.judul || "").toLowerCase();
-      const vb = (b.judul || "").toLowerCase();
-      if (va < vb) return order === "asc" ? -1 : 1;
-      if (va > vb) return order === "asc" ? 1 : -1;
-      return 0;
+      const valueA = (a.judul || "").toLowerCase();
+      const valueB = (b.judul || "").toLowerCase();
+      const comparison = valueA.localeCompare(valueB);
+      return order === "asc" ? comparison : -comparison;
     }
 
-    // default: createdAt
-    const da = new Date(a.createdAt).getTime() || 0;
-    const db = new Date(b.createdAt).getTime() || 0;
-    return order === "asc" ? da - db : db - da;
+    // Default: sort by createdAt
+    const dateA = new Date(a.createdAt || 0).getTime();
+    const dateB = new Date(b.createdAt || 0).getTime();
+    return order === "asc" ? dateA - dateB : dateB - dateA;
   });
 
-  console.log("Final filtered results:", res.length, "items");
-  return res;
+  return filtered;
+}
+
+function renderReportsWithPagination(reports) {
+  const limit = 9;
+  const total = reports.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  // Adjust current page if out of bounds
+  if (state.currentPage > totalPages) state.currentPage = totalPages;
+  if (state.currentPage < 1) state.currentPage = 1;
+
+  const start = (state.currentPage - 1) * limit;
+  const end = start + limit;
+  const pageReports = reports.slice(start, end);
+
+  renderReports(pageReports);
+  renderPagination({ page: state.currentPage, totalPages, total });
 }
 
 function sensorNama(nama) {
   if (!nama) return "Anonymous";
 
-  let parts = nama.split(" ");
-
-  let sensor = parts.map((kata) => {
-    if (kata.length <= 2) {
-      return kata;
-    }
-
-    return kata[0] + "*".repeat(kata.length - 1);
-  });
-
-  return sensor.join(" ");
+  return nama
+    .split(" ")
+    .map((word) => {
+      if (word.length <= 2) return word;
+      return word[0] + "*".repeat(word.length - 1);
+    })
+    .join(" ");
 }
 
 // Render reports cards
 function renderReports(reports) {
-  const reportsList = document.getElementById("reportsList");
-
   if (reports.length === 0) {
-    reportsList.innerHTML = `
-            <div class="empty-state">
-                <i class="fa-solid fa-inbox"></i>
-                <p>Tidak ada laporan yang ditemukan</p>
-                <small>Coba ubah filter pencarian Anda</small>
-            </div>
-        `;
+    domElements.reportsList.innerHTML = `
+      <div class="empty-state">
+        <i class="fa-solid fa-inbox"></i>
+        <p>Tidak ada laporan yang ditemukan</p>
+        <small>Coba ubah filter pencarian Anda</small>
+      </div>
+    `;
     return;
   }
 
-  reportsList.innerHTML = reports
-    .map(
-      (report) => `
-        <div class="report-card" onclick="viewDetail('${report._id}')">
-            <div class="report-header">
-                <div class="report-meta">
-                    <span class="report-number">
-                        <i class="fa-solid fa-hashtag"></i> ${
-                          report.nomor_laporan
-                        }
-                    </span>
-                    <span class="report-date">
-                        <i class="fa-solid fa-calendar"></i> ${formatDate(
-                          report.createdAt
-                        )}
-                    </span>
-                </div>
-                <span class="status-badge status-${report.status_laporan.replace(
-                  " ",
-                  "-"
-                )}">
-                    ${getStatusIcon(report.status_laporan)} ${
-        report.status_laporan
-      }
-                </span>
-            </div>
-            
-            ${
-              report.gambar
-                ? `
-                <div class="report-image">
-                    <img src="${report.gambar}" alt="${report.judul}">
-                </div>
-            `
-                : ""
-            }
-            
-            <div class="report-body">
-                <h3 class="report-title">${report.judul}</h3>
-                <p class="report-description">${truncateText(
-                  report.deskripsi,
-                  150
-                )}</p>
-                
-                <div class="report-tags">
-                    ${
-                      report.kategori
-                        ? `
-                        <span class="tag tag-kategori">
-                            <i class="fa-solid fa-tag"></i> ${report.kategori}
-                        </span>
-                    `
-                        : ""
-                    }
-                    ${
-                      report.kategori_ai
-                        ? `
-                        <span class="tag tag-ai">
-                            <i class="fa-solid fa-robot"></i> ${report.kategori_ai}
-                        </span>
-                    `
-                        : ""
-                    }
-                    ${
-                      report.sentimen_ai
-                        ? `
-                        <span class="tag tag-sentiment sentiment-${
-                          report.sentimen_ai
-                        }">
-                            ${getSentimentIcon(report.sentimen_ai)} ${
-                            report.sentimen_ai
-                          }
-                        </span>
-                    `
-                        : ""
-                    }
-                </div>
-                
-                <div class="report-footer">
-                    <div class="report-author">
-                        <i class="fa-solid fa-user"></i>
-                        <span>${
-                          sensorNama(report.warga_id?.user_warga) || "Anonymous"
-                        }</span>
-                    </div>
-                    ${
-                      report.lokasi
-                        ? `
-                        <div class="report-location">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span>${report.lokasi}</span>
-                        </div>
-                    `
-                        : ""
-                    }
-                </div>
-            </div>
-            
-            <div class="report-action">
-                <button class="btn-detail">
-                    <i class="fa-solid fa-eye"></i> Lihat Detail
-                </button>
-            </div>
-        </div>
-    `
-    )
+  domElements.reportsList.innerHTML = reports
+    .map((report) => createReportCardHTML(report))
     .join("");
 }
 
-// Render pagination
-function renderPagination(pagination) {
-  const container = document.getElementById("paginationContainer");
-  if (!container) return;
-  const { page, totalPages, total } = pagination;
+function createReportCardHTML(report) {
+  const imageHTML = report.gambar
+    ? createImageHTML(report.gambar, report.judul)
+    : "";
 
-  // Hide pagination if only one page
+  return `
+    <div class="report-card" data-id="${report._id}">
+      <div class="report-header">
+        <div class="report-meta">
+          <span class="report-number">
+            <i class="fa-solid fa-hashtag"></i> ${report.nomor_laporan}
+          </span>
+          <span class="report-date">
+            <i class="fa-solid fa-calendar"></i> ${formatDate(report.createdAt)}
+          </span>
+        </div>
+        <span class="status-badge status-${report.status_laporan.replace(
+          /\s+/g,
+          "-"
+        )}">
+          ${getStatusIcon(report.status_laporan)} ${report.status_laporan}
+        </span>
+      </div>
+      
+      ${imageHTML}
+      
+      <div class="report-body">
+        <h3 class="report-title">${report.judul}</h3>
+        <p class="report-description">${truncateText(report.deskripsi, 150)}</p>
+        
+        <div class="report-tags">
+          ${
+            report.kategori
+              ? createTagHTML(report.kategori, "tag-kategori", "fa-tag")
+              : ""
+          }
+          ${
+            report.kategori_ai
+              ? createTagHTML(report.kategori_ai, "tag-ai", "fa-robot")
+              : ""
+          }
+          ${
+            report.sentimen_ai ? createSentimentTagHTML(report.sentimen_ai) : ""
+          }
+        </div>
+        
+        <div class="report-footer">
+          <div class="report-author">
+            <i class="fa-solid fa-user"></i>
+            <span>${sensorNama(report.warga_id?.user_warga)}</span>
+          </div>
+          ${
+            report.lokasi
+              ? `
+            <div class="report-location">
+              <i class="fa-solid fa-location-dot"></i>
+              <span>${report.lokasi}</span>
+            </div>
+          `
+              : ""
+          }
+        </div>
+      </div>
+      
+      <div class="report-action">
+        <button class="btn-detail">
+          <i class="fa-solid fa-eye"></i> Lihat Detail
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function createImageHTML(url, title) {
+  return `
+    <div class="report-image">
+      <img src="${url}" alt="${title}" loading="lazy">
+    </div>
+  `;
+}
+
+function createTagHTML(text, className, icon) {
+  return `
+    <span class="tag ${className}">
+      <i class="fa-solid ${icon}"></i> ${text}
+    </span>
+  `;
+}
+
+function createSentimentTagHTML(sentiment) {
+  return `
+    <span class="tag tag-sentiment sentiment-${sentiment}">
+      ${getSentimentIcon(sentiment)} ${sentiment}
+    </span>
+  `;
+}
+
+// Render pagination
+function renderPagination({ page, totalPages, total }) {
+  if (!domElements.paginationContainer) return;
+
   if (totalPages <= 1) {
-    container.innerHTML = "";
-    container.style.display = "none";
+    domElements.paginationContainer.innerHTML = "";
+    domElements.paginationContainer.style.display = "none";
     return;
   }
 
-  container.style.display = "block";
+  domElements.paginationContainer.style.display = "block";
+  domElements.paginationContainer.innerHTML = createPaginationHTML(
+    page,
+    totalPages,
+    total
+  );
+}
 
-  let html = '<div class="pagination-info">';
-  html += `<p>Menampilkan halaman ${page} dari ${totalPages} (${total} total laporan)</p>`;
-  html += "</div>";
-
-  html += '<div class="pagination-controls">';
-
-  // Previous button
-  html += `<button class="btn-page" ${
+function createPaginationHTML(page, totalPages, total) {
+  return `
+    <div class="pagination-info">
+      <p>Menampilkan halaman ${page} dari ${totalPages} (${total} total laporan)</p>
+    </div>
+    <div class="pagination-controls">
+      <button class="btn-page" data-page="${page - 1}" ${
     page === 1 ? "disabled" : ""
-  } onclick="changePage(${page - 1})">
-                                <i class="fa-solid fa-chevron-left"></i> Sebelumnya
-                </button>`;
+  }>
+        <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+      </button>
+      
+      ${generatePageNumbers(page, totalPages)}
+      
+      <button class="btn-page" data-page="${page + 1}" ${
+    page === totalPages ? "disabled" : ""
+  }>
+        Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  `;
+}
 
-  // Page numbers
+function generatePageNumbers(currentPage, totalPages) {
+  let pagesHTML = "";
+
   for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
-      html += `<button class="btn-page ${
-        i === page ? "active" : ""
-      }" onclick="changePage(${i})">${i}</button>`;
-    } else if (i === page - 3 || i === page + 3) {
-      html += '<span class="pagination-ellipsis">...</span>';
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - 2 && i <= currentPage + 2)
+    ) {
+      pagesHTML += `<button class="btn-page ${
+        i === currentPage ? "active" : ""
+      }" data-page="${i}">${i}</button>`;
+    } else if (i === currentPage - 3 || i === currentPage + 3) {
+      pagesHTML += '<span class="pagination-ellipsis">...</span>';
     }
   }
 
-  // Next button
-  html += `<button class="btn-page" ${
-    page === totalPages ? "disabled" : ""
-  } onclick="changePage(${page + 1})">
-                                Selanjutnya <i class="fa-solid fa-chevron-right"></i>
-                </button>`;
-
-  html += "</div>";
-  container.innerHTML = html;
+  return pagesHTML;
 }
 
 // Change page
 function changePage(page) {
-  currentPage = page;
+  state.currentPage = page;
   loadReports();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -572,8 +666,9 @@ function changePage(page) {
 async function viewDetail(id) {
   try {
     const response = await fetch(`${API_URL}/public/${id}`);
-    const result = await response.json();
+    if (!response.ok) throw new Error("Failed to fetch report details");
 
+    const result = await response.json();
     if (result.success) {
       showDetailModal(result.data);
     } else {
@@ -590,139 +685,162 @@ function showDetailModal(laporan) {
   const modal = document.getElementById("detailModal");
   const modalBody = document.getElementById("modalBody");
 
-  modalBody.innerHTML = `
-        <div class="detail-container">
-            <div class="detail-header-section">
-                <div class="detail-status-row">
-                    <span class="status-badge status-${laporan.status_laporan.replace(
-                      " ",
-                      "-"
-                    )}">
-                        ${getStatusIcon(laporan.status_laporan)} ${
-    laporan.status_laporan
-  }
-                    </span>
-                    <span class="detail-number">${laporan.nomor_laporan}</span>
-                </div>
-                <h2>${laporan.judul}</h2>
-                <div class="detail-meta">
-                    <span><i class="fa-solid fa-user"></i> ${
-                      laporan.warga_id?.user_warga || "Anonymous"
-                    }</span>
-                    <span><i class="fa-solid fa-calendar"></i> ${formatDate(
-                      laporan.createdAt
-                    )}</span>
-                    ${
-                      laporan.lokasi
-                        ? `<span><i class="fa-solid fa-location-dot"></i> ${laporan.lokasi}</span>`
-                        : ""
-                    }
-                </div>
-            </div>
-            
-            ${
-              laporan.gambar
-                ? `
-                <div class="detail-image-section">
-                    <img src="${laporan.gambar}" alt="${laporan.judul}">
-                </div>
-            `
-                : ""
-            }
-            
-            <div class="detail-content-section">
-                <h3><i class="fa-solid fa-file-lines"></i> Deskripsi Laporan</h3>
-                <p class="detail-description">${laporan.deskripsi}</p>
-            </div>
-            
-            ${
-              laporan.kategori_ai ||
-              laporan.sentimen_ai ||
-              (laporan.keywords_ai && laporan.keywords_ai.length > 0)
-                ? `
-                <div class="detail-ai-section">
-                    <h3><i class="fa-solid fa-robot"></i> Analisis AI</h3>
-                    <div class="ai-tags">
-                        ${
-                          laporan.kategori
-                            ? `
-                            <div class="ai-item">
-                                <label>Kategori (User):</label>
-                                <span class="tag tag-kategori">
-                                    <i class="fa-solid fa-tag"></i> ${laporan.kategori}
-                                </span>
-                            </div>
-                        `
-                            : ""
-                        }
-                        ${
-                          laporan.kategori_ai
-                            ? `
-                            <div class="ai-item">
-                                <label>Kategori (AI):</label>
-                                <span class="tag tag-ai">
-                                    <i class="fa-solid fa-robot"></i> ${laporan.kategori_ai}
-                                </span>
-                            </div>
-                        `
-                            : ""
-                        }
-                        ${
-                          laporan.sentimen_ai
-                            ? `
-                            <div class="ai-item">
-                                <label>Sentimen:</label>
-                                <span class="tag tag-sentiment sentiment-${
-                                  laporan.sentimen_ai
-                                }">
-                                    ${getSentimentIcon(laporan.sentimen_ai)} ${
-                                laporan.sentimen_ai
-                              }
-                                </span>
-                            </div>
-                        `
-                            : ""
-                        }
-                        ${
-                          laporan.keywords_ai && laporan.keywords_ai.length > 0
-                            ? `
-                            <div class="ai-item keywords-item">
-                                <label>Keywords:</label>
-                                <div class="keywords-list">
-                                    ${laporan.keywords_ai
-                                      .map(
-                                        (k) =>
-                                          `<span class="keyword-tag">${k}</span>`
-                                      )
-                                      .join("")}
-                                </div>
-                            </div>
-                        `
-                            : ""
-                        }
-                    </div>
-                </div>
-            `
-                : ""
-            }
-            
-            ${
-              laporan.komentar
-                ? `
-                <div class="detail-response-section">
-                    <h3><i class="fa-solid fa-comment-dots"></i> Tanggapan Admin</h3>
-                    <div class="response-box">
-                        <p>${laporan.komentar}</p>
-                    </div>
-                </div>
-            `
-                : ""
-            }
-        </div>
-    `;
+  if (!modal || !modalBody) return;
+
+  modalBody.innerHTML = createDetailModalHTML(laporan);
 
   modal.style.display = "flex";
+  setupModalEventListeners(modal);
+}
 
+function createDetailModalHTML(laporan) {
+  const attachmentHTML = laporan.gambar
+    ? createAttachmentHTML(laporan.gambar, laporan.judul)
+    : "";
+  const aiAnalysisHTML = createAiAnalysisHTML(laporan);
+
+  return `
+    <div class="detail-container">
+      <div class="detail-header-section">
+        <div class="detail-status-row">
+          <span class="status-badge status-${laporan.status_laporan.replace(
+            /\s+/g,
+            "-"
+          )}">
+            ${getStatusIcon(laporan.status_laporan)} ${laporan.status_laporan}
+          </span>
+          <span class="detail-number">${laporan.nomor_laporan}</span>
+        </div>
+        <h2>${laporan.judul}</h2>
+        <div class="detail-meta">
+          <span><i class="fa-solid fa-user"></i> ${
+            laporan.warga_id?.user_warga || "Anonymous"
+          }</span>
+          <span><i class="fa-solid fa-calendar"></i> ${formatDate(
+            laporan.createdAt
+          )}</span>
+          ${
+            laporan.lokasi
+              ? `<span><i class="fa-solid fa-location-dot"></i> ${laporan.lokasi}</span>`
+              : ""
+          }
+        </div>
+      </div>
+      
+      ${attachmentHTML}
+      
+      <div class="detail-content-section">
+        <h3><i class="fa-solid fa-file-lines"></i> Deskripsi Laporan</h3>
+        <p class="detail-description">${laporan.deskripsi}</p>
+      </div>
+      
+      ${aiAnalysisHTML}
+      
+      ${laporan.komentar ? createAdminResponseHTML(laporan.komentar) : ""}
+    </div>
+  `;
+}
+
+function createAttachmentHTML(url, title) {
+  return `
+    <div class="detail-image-section">
+      <img src="${url}" alt="${title}" loading="lazy">
+    </div>
+  `;
+}
+
+function createAiAnalysisHTML(laporan) {
+  const hasAiAnalysis =
+    laporan.kategori_ai ||
+    laporan.sentimen_ai ||
+    (laporan.keywords_ai && laporan.keywords_ai.length > 0);
+
+  if (!hasAiAnalysis) return "";
+
+  return `
+    <div class="detail-ai-section">
+      <h3><i class="fa-solid fa-robot"></i> Analisis AI</h3>
+      <div class="ai-tags">
+        ${
+          laporan.kategori
+            ? createAiItemHTML(
+                "Kategori (User):",
+                laporan.kategori,
+                "tag-kategori",
+                "fa-tag"
+              )
+            : ""
+        }
+        ${
+          laporan.kategori_ai
+            ? createAiItemHTML(
+                "Kategori (AI):",
+                laporan.kategori_ai,
+                "tag-ai",
+                "fa-robot"
+              )
+            : ""
+        }
+        ${
+          laporan.sentimen_ai
+            ? createSentimentItemHTML(laporan.sentimen_ai)
+            : ""
+        }
+        ${createKeywordsHTML(laporan.keywords_ai)}
+      </div>
+    </div>
+  `;
+}
+
+function createAiItemHTML(label, value, className, icon) {
+  return `
+    <div class="ai-item">
+      <label>${label}</label>
+      <span class="tag ${className}">
+        <i class="fa-solid ${icon}"></i> ${value}
+      </span>
+    </div>
+  `;
+}
+
+function createSentimentItemHTML(sentiment) {
+  return `
+    <div class="ai-item">
+      <label>Sentimen:</label>
+      <span class="tag tag-sentiment sentiment-${sentiment}">
+        ${getSentimentIcon(sentiment)} ${sentiment}
+      </span>
+    </div>
+  `;
+}
+
+function createKeywordsHTML(keywords) {
+  if (!keywords || !Array.isArray(keywords) || keywords.length === 0) return "";
+
+  return `
+    <div class="ai-item keywords-item">
+      <label>Keywords:</label>
+      <div class="keywords-list">
+        ${keywords
+          .map((keyword) => `<span class="keyword-tag">${keyword}</span>`)
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function createAdminResponseHTML(comment) {
+  return `
+    <div class="detail-response-section">
+      <h3><i class="fa-solid fa-comment-dots"></i> Tanggapan Admin</h3>
+      <div class="response-box">
+        <p>${comment}</p>
+      </div>
+    </div>
+  `;
+}
+
+function setupModalEventListeners(modal) {
   // Close modal handlers
   document.getElementById("closeModal").onclick = () => {
     modal.style.display = "none";
@@ -737,15 +855,19 @@ function showDetailModal(laporan) {
 
 // Helper functions
 function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  };
-  return date.toLocaleDateString("id-ID", options);
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Tanggal tidak tersedia";
+  }
 }
 
 function truncateText(text, maxLength) {
@@ -755,16 +877,12 @@ function truncateText(text, maxLength) {
 }
 
 function getStatusIcon(status) {
-  switch (status) {
-    case "Belum dikerjakan":
-      return '<i class="fa-solid fa-clock"></i>';
-    case "Sedang dikerjakan":
-      return '<i class="fa-solid fa-spinner"></i>';
-    case "Selesai":
-      return '<i class="fa-solid fa-check-circle"></i>';
-    default:
-      return '<i class="fa-solid fa-circle"></i>';
-  }
+  const icons = {
+    "Belum dikerjakan": '<i class="fa-solid fa-clock"></i>',
+    "Sedang dikerjakan": '<i class="fa-solid fa-spinner"></i>',
+    Selesai: '<i class="fa-solid fa-check-circle"></i>',
+  };
+  return icons[status] || '<i class="fa-solid fa-circle"></i>';
 }
 
 function getSentimentIcon(sentiment) {
