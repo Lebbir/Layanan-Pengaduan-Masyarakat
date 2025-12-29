@@ -31,7 +31,6 @@ async function loadComponents() {
 
     // Initialize header functionality
     setupHeaderNavigation();
-    initHeaderBasic();
   } catch (error) {
     console.error("Error loading components:", error);
   }
@@ -157,18 +156,21 @@ function setupEventListeners() {
   const btnResetFilter = document.getElementById("btnResetFilter");
 
   // Real-time search with debounce
+  // Search input: store value but do NOT trigger search automatically.
+  // User must click "Terapkan" to apply filters.
   let searchTimeout;
+  let pendingSearch = "";
   searchInput.addEventListener("input", (e) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      currentFilters.search = e.target.value;
-      currentPage = 1;
-      loadReports();
-    }, 500);
+      pendingSearch = e.target.value;
+    }, 300);
   });
 
   // Apply filters button
   btnApplyFilter.addEventListener("click", () => {
+    // Apply pending search and selected filters
+    currentFilters.search = (pendingSearch || searchInput.value || "").trim();
     currentFilters.kategori = filterKategori.value;
     currentFilters.status = filterStatus.value;
 
@@ -187,6 +189,8 @@ function setupEventListeners() {
     filterStatus.value = "";
     filterSort.value = "createdAt-desc";
 
+    // clear pending search and reset filters
+    pendingSearch = "";
     currentFilters = {
       search: "",
       kategori: "",
@@ -232,18 +236,31 @@ async function loadReports() {
             </div>
         `;
 
-    const params = new URLSearchParams({
-      page: currentPage,
-      limit: 12,
-      ...currentFilters,
-    });
+    // Fetch all reports from server (client-side filtering/sorting/pagination)
+    const FETCH_LIMIT = 10000; // large enough to fetch all items; adjust if needed
+    const params = new URLSearchParams({ page: 1, limit: FETCH_LIMIT });
 
     const response = await fetch(`${API_URL}/public?${params}`);
     const result = await response.json();
 
     if (result.success) {
-      renderReports(result.data);
-      renderPagination(result.pagination);
+      const allReports = Array.isArray(result.data) ? result.data : [];
+
+      // Apply client-side filters, sorting and pagination
+      const filtered = applyClientFilters(allReports);
+
+      const total = filtered.length;
+      const limit = 9;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      // Ensure currentPage is within range
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const start = (currentPage - 1) * limit;
+      const pageReports = filtered.slice(start, start + limit);
+
+      renderReports(pageReports);
+      renderPagination({ page: currentPage, totalPages, total });
     } else {
       reportsList.innerHTML = `
                 <div class="empty-state">
@@ -261,6 +278,97 @@ async function loadReports() {
             </div>
         `;
   }
+}
+
+// Apply client-side filtering and sorting
+function applyClientFilters(reports) {
+  if (!Array.isArray(reports)) return [];
+
+  console.log("applyClientFilters called with", reports.length, "reports");
+  console.log("currentFilters:", currentFilters);
+
+  const statusMap = {
+    pending: "Belum dikerjakan",
+    "in progress": "Sedang dikerjakan",
+    completed: "Selesai",
+  };
+
+  let res = reports.slice();
+
+  // Search (title or description)
+  const q = (currentFilters.search || "").trim().toLowerCase();
+  if (q) {
+    console.log("Filtering by search:", q);
+    res = res.filter((r) => {
+      const title = (r.judul || "").toLowerCase();
+      const desc = (r.deskripsi || "").toLowerCase();
+      return title.includes(q) || desc.includes(q);
+    });
+    console.log("After search filter:", res.length, "items");
+  }
+
+  // Category
+  if (currentFilters.kategori) {
+    const cat = (currentFilters.kategori || "").trim().toLowerCase();
+    console.log("Filtering by kategori:", cat);
+    const beforeCount = res.length;
+    // Prefer AI-assigned category (`kategori_ai`) if available, otherwise use user category (`kategori`)
+    res = res.filter((r) => {
+      const dbKat = ((r.kategori_ai && r.kategori_ai) || r.kategori || "")
+        .trim()
+        .toLowerCase();
+      return dbKat === cat;
+    });
+    console.log(
+      "After kategori filter:",
+      res.length,
+      "items (was",
+      beforeCount,
+      ")"
+    );
+  }
+
+  // Status
+  if (currentFilters.status) {
+    console.log("Filtering by status:", currentFilters.status);
+    const mapped = statusMap[currentFilters.status] || currentFilters.status;
+    const beforeCount = res.length;
+    res = res.filter(
+      (r) =>
+        (r.status_laporan || "").trim().toLowerCase() ===
+        mapped.trim().toLowerCase()
+    );
+    console.log(
+      "After status filter:",
+      res.length,
+      "items (was",
+      beforeCount,
+      ")"
+    );
+  }
+
+  // Sorting
+  const sortBy = currentFilters.sortBy || "createdAt";
+  const order = currentFilters.order || "desc";
+  console.log("Sorting by:", sortBy, "order:", order);
+
+  res.sort((a, b) => {
+    if (sortBy === "judul") {
+      const va = (a.judul || "").toLowerCase();
+      const vb = (b.judul || "").toLowerCase();
+      if (va < vb) return order === "asc" ? -1 : 1;
+      if (va > vb) return order === "asc" ? 1 : -1;
+      return 0;
+    }
+
+    // default: createdAt
+    const da = new Date(a.createdAt).getTime() || 0;
+    const db = new Date(b.createdAt).getTime() || 0;
+    return order === "asc" ? da - db : db - da;
+  });
+
+  console.log("Final filtered results:", res.length, "items");
+  return res;
 }
 
 function sensorNama(nama) {
@@ -406,12 +514,17 @@ function renderReports(reports) {
 // Render pagination
 function renderPagination(pagination) {
   const container = document.getElementById("paginationContainer");
+  if (!container) return;
   const { page, totalPages, total } = pagination;
 
+  // Hide pagination if only one page
   if (totalPages <= 1) {
     container.innerHTML = "";
+    container.style.display = "none";
     return;
   }
+
+  container.style.display = "block";
 
   let html = '<div class="pagination-info">';
   html += `<p>Menampilkan halaman ${page} dari ${totalPages} (${total} total laporan)</p>`;
@@ -423,8 +536,8 @@ function renderPagination(pagination) {
   html += `<button class="btn-page" ${
     page === 1 ? "disabled" : ""
   } onclick="changePage(${page - 1})">
-        <i class="fa-solid fa-chevron-left"></i> Sebelumnya
-    </button>`;
+                                <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                </button>`;
 
   // Page numbers
   for (let i = 1; i <= totalPages; i++) {
@@ -441,8 +554,8 @@ function renderPagination(pagination) {
   html += `<button class="btn-page" ${
     page === totalPages ? "disabled" : ""
   } onclick="changePage(${page + 1})">
-        Selanjutnya <i class="fa-solid fa-chevron-right"></i>
-    </button>`;
+                                Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+                </button>`;
 
   html += "</div>";
   container.innerHTML = html;
