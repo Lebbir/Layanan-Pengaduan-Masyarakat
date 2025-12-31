@@ -759,12 +759,12 @@ function createAiAnalysisHTML(laporan) {
 
   return `
     <div class="detail-ai-section">
-      <h3><i class="fa-solid fa-robot"></i> Analisis AI</h3>
+      <h3></i> Analisis</h3>
       <div class="ai-tags">
         ${
           laporan.kategori
             ? createAiItemHTML(
-                "Kategori (User):",
+                "Topik:",
                 laporan.kategori,
                 "tag-kategori",
                 "fa-tag"
@@ -774,7 +774,7 @@ function createAiAnalysisHTML(laporan) {
         ${
           laporan.kategori_ai
             ? createAiItemHTML(
-                "Kategori (AI):",
+                "Kategori Otomatis:",
                 laporan.kategori_ai,
                 "tag-ai",
                 "fa-robot"
