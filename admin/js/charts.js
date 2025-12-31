@@ -1,7 +1,8 @@
 // Chart Variables
 let categoryChart, statusChart, trendChart;
+// API_BASE_URL is defined in admin.js
 
-// Initialize All Charts
+// Initialize All Charts - will be populated with real data
 function initCharts() {
     initCategoryChart();
     initStatusChart();
@@ -16,10 +17,10 @@ function initCategoryChart() {
     categoryChart = new Chart(categoryCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Complaint', 'Aspiration', 'Suggestion', 'Appreciation'],
+            labels: ['Infrastruktur', 'Sosial', 'Pelayanan', 'Keamanan', 'Kesehatan', 'Lingkungan', 'Lainnya'],
             datasets: [{
-                data: [450, 320, 280, 184],
-                backgroundColor: ['#ff6b6b', '#4dabf7', '#ffa500', '#51cf66'],
+                data: [0, 0, 0, 0, 0, 0, 0],
+                backgroundColor: ['#ff6b6b', '#4dabf7', '#ffa500', '#51cf66', '#845ef7', '#20c997', '#868e96'],
                 borderWidth: 0
             }]
         },
@@ -47,9 +48,9 @@ function initStatusChart() {
     statusChart = new Chart(statusCtx, {
         type: 'pie',
         data: {
-            labels: ['Pending', 'In Progress', 'Resolved'],
+            labels: ['Belum dikerjakan', 'Sedang dikerjakan', 'Selesai'],
             datasets: [{
-                data: [56, 12, 1166],
+                data: [0, 0, 0],
                 backgroundColor: ['#ff6b6b', '#ffa500', '#51cf66'],
                 borderWidth: 0
             }]
@@ -78,10 +79,10 @@ function initTrendChart() {
     trendChart = new Chart(trendCtx, {
         type: 'line',
         data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             datasets: [{
-                label: 'Submissions',
-                data: [65, 78, 90, 81, 95, 108, 120, 115, 130, 142],
+                label: 'Laporan',
+                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 borderColor: '#0066CC',
                 backgroundColor: 'rgba(0, 102, 204, 0.1)',
                 tension: 0.4,
@@ -101,6 +102,10 @@ function initTrendChart() {
                     beginAtZero: true,
                     grid: {
                         color: '#f0f0f0'
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        precision: 0
                     }
                 },
                 x: {
@@ -129,50 +134,117 @@ function initDateFilters() {
 }
 
 // Update Charts Based on Date Range
-function updateCharts() {
+async function updateCharts() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     
     if (!startDate || !endDate) {
-        alert('Please select both start and end dates');
+        alert('Silakan pilih tanggal mulai dan akhir');
         return;
     }
     
     if (new Date(startDate) > new Date(endDate)) {
-        alert('Start date must be before end date');
+        alert('Tanggal mulai harus sebelum tanggal akhir');
         return;
     }
     
-    // TODO: Replace with actual API call
-    // Example: fetchChartData(startDate, endDate).then(data => updateChartsWithData(data));
+    // Fetch data from backend with date filter
+    try {
+        const response = await fetch(`${API_BASE_URL}/laporan/all?limit=1000`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load chart data');
+        
+        const result = await response.json();
+        
+        // Filter by date range
+        const filteredData = result.data.filter(report => {
+            const reportDate = new Date(report.createdAt);
+            return reportDate >= new Date(startDate) && reportDate <= new Date(endDate);
+        });
+        
+        updateChartsWithData(filteredData);
+        showNotification(`Charts updated for ${startDate} to ${endDate}`, 'success');
+    } catch (error) {
+        console.error('Error updating charts:', error);
+        showNotification('Failed to update charts', 'error');
+    }
+}
+
+// Update charts with real backend data
+async function updateChartsWithData(reports) {
+    console.log('updateChartsWithData called with reports:', reports);
     
-    // Simulate data update based on date range
-    const daysDiff = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
-    const multiplier = Math.max(0.5, Math.min(1.5, daysDiff / 30));
+    if (!reports || reports.length === 0) {
+        console.log('No reports data to display');
+        return;
+    }
     
-    // Update category chart
-    updateCategoryChart([
-        Math.round(450 * multiplier),
-        Math.round(320 * multiplier),
-        Math.round(280 * multiplier),
-        Math.round(184 * multiplier)
-    ]);
+    // Count by category
+    const categoryCount = {
+        'Infrastruktur': 0,
+        'Sosial': 0,
+        'Pelayanan': 0,
+        'Keamanan': 0,
+        'Kesehatan': 0,
+        'Lingkungan': 0,
+        'Lainnya': 0
+    };
     
-    // Update status chart
-    updateStatusChart([
-        Math.round(56 * multiplier),
-        Math.round(12 * multiplier),
-        Math.round(1166 * multiplier)
-    ]);
+    // Count by status
+    const statusCount = {
+        'Belum dikerjakan': 0,
+        'Sedang dikerjakan': 0,
+        'Selesai': 0
+    };
     
-    // Update trend chart
-    const months = Math.min(10, Math.ceil(daysDiff / 30));
-    const trendData = Array.from({length: months}, (_, i) => 
-        Math.round(65 + (i * 8) + (Math.random() * 10))
-    );
-    updateTrendChart(trendData, months);
+    // Count by month
+    const monthlyCount = new Array(12).fill(0);
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
-    showNotification(`Charts updated for ${startDate} to ${endDate}`, 'success');
+    reports.forEach(report => {
+        // Category count - Use kategori_ai which contains the actual report category
+        let kategori = report.kategori_ai || 'Lainnya';
+        
+        // Normalize category name (trim)
+        kategori = kategori.toString().trim();
+        
+        // Check if category exists in our predefined categories
+        const categoryKeys = Object.keys(categoryCount);
+        const matchedCategory = categoryKeys.find(key => 
+            key.toLowerCase() === kategori.toLowerCase()
+        );
+        
+        if (matchedCategory) {
+            categoryCount[matchedCategory]++;
+        } else {
+            categoryCount['Lainnya']++;
+        }
+        
+        // Status count
+        if (statusCount.hasOwnProperty(report.status_laporan)) {
+            statusCount[report.status_laporan]++;
+        }
+        
+        // Monthly count
+        const month = new Date(report.createdAt).getMonth();
+        monthlyCount[month]++;
+    });
+    
+    console.log('Final category count:', categoryCount);
+    console.log('Final status count:', statusCount);
+    
+    // Update Category Chart
+    updateCategoryChart(Object.values(categoryCount));
+    
+    // Update Status Chart
+    updateStatusChart(Object.values(statusCount));
+    
+    // Update Trend Chart
+    updateTrendChart(monthlyCount, monthNames);
 }
 
 // Update Category Chart Data
@@ -190,10 +262,12 @@ function updateStatusChart(data) {
 }
 
 // Update Trend Chart Data
-function updateTrendChart(data, months) {
+function updateTrendChart(data, labels) {
     if (!trendChart) return;
     trendChart.data.datasets[0].data = data;
-    trendChart.data.labels = trendChart.data.labels.slice(0, months);
+    if (labels) {
+        trendChart.data.labels = labels;
+    }
     trendChart.update();
 }
 
@@ -220,49 +294,3 @@ function showNotification(message, type = 'success') {
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
-
-// Example API Integration (for backend developer)
-/*
-async function fetchChartData(startDate, endDate) {
-    try {
-        const response = await fetch(`/api/dashboard/charts?start=${startDate}&end=${endDate}`);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching chart data:', error);
-        showNotification('Failed to fetch chart data', 'error');
-        return null;
-    }
-}
-
-async function updateChartsWithData(data) {
-    if (!data) return;
-    
-    // Update category chart
-    if (data.categories) {
-        updateCategoryChart([
-            data.categories.complaint || 0,
-            data.categories.aspiration || 0,
-            data.categories.suggestion || 0,
-            data.categories.appreciation || 0
-        ]);
-    }
-    
-    // Update status chart
-    if (data.statuses) {
-        updateStatusChart([
-            data.statuses.pending || 0,
-            data.statuses.inProgress || 0,
-            data.statuses.resolved || 0
-        ]);
-    }
-    
-    // Update trend chart
-    if (data.trends) {
-        const trendData = data.trends.map(item => item.count);
-        const labels = data.trends.map(item => item.month);
-        trendChart.data.labels = labels;
-        updateTrendChart(trendData, labels.length);
-    }
-}
-*/

@@ -76,22 +76,22 @@
         <section class="stats-grid">
             <div class="stat-card">
                 <span class="stat-label">Total Submissions</span>
-                <div class="stat-value">1,234</div>
+                <div class="stat-value">0</div>
             </div>
 
             <div class="stat-card stat-pending">
                 <span class="stat-label">Pending</span>
-                <div class="stat-value">56</div>
+                <div class="stat-value">0</div>
             </div>
 
             <div class="stat-card stat-progress">
                 <span class="stat-label">In Progress</span>
-                <div class="stat-value">12</div>
+                <div class="stat-value">0</div>
             </div>
 
             <div class="stat-card stat-resolved">
                 <span class="stat-label">Resolved</span>
-                <div class="stat-value">1,166</div>
+                <div class="stat-value">0</div>
             </div>
         </section>
 
@@ -137,16 +137,11 @@
                 
                 <div class="section-filters">
                     <select class="filter-select">
-                        <option>Semua Status</option>
-                        <option>Pending</option>
-                        <option>In Progress</option>
-                        <option>Resolved</option>
+                        <option value="">Semua Status</option>
                     </select>
 
                     <select class="filter-select">
-                        <option>Semua Tipe</option>
-                        <option>Keluhan</option>
-                        <option>Saran</option>
+                        <option value="">Semua Kategori</option>
                     </select>
                 </div>
             </div>
@@ -165,60 +160,7 @@
                     </thead>
                     <tbody id="submissionsTable">
                         <tr>
-                            <td><a href="#" class="id-link">#8214</a></td>
-                            <td>Perbaikan Jalan Rusak</td>
-                            <td>Complaint</td>
-                            <td><span class="badge badge-resolved">Resolved</span></td>
-                            <td>2023-10-26</td>
-                            <td><a href="#" class="action-link" onclick="viewReport('8214'); return false;">View</a></td>
-                        </tr>
-                        <tr>
-                            <td><a href="#" class="id-link">#8213</a></td>
-                            <td>Lampu Jalan Mati</td>
-                            <td>Complaint</td>
-                            <td><span class="badge badge-progress">In Progress</span></td>
-                            <td>2023-10-25</td>
-                            <td><a href="#" class="action-link" onclick="viewReport('8213'); return false;">View</a></td>
-                        </tr>
-                        <tr>
-                            <td><a href="#" class="id-link">#8212</a></td>
-                            <td>Ide Festival Desa</td>
-                            <td>Aspiration</td>
-                            <td><span class="badge badge-pending">Pending</span></td>
-                            <td>2023-10-25</td>
-                            <td><a href="#" class="action-link" onclick="viewReport('8212'); return false;">View</a></td>
-                        </tr>
-                        <tr>
-                            <td><a href="#" class="id-link">#8211</a></td>
-                            <td>Masalah Keamanan Lingkungan</td>
-                            <td>Complaint</td>
-                            <td><span class="badge badge-resolved">Resolved</span></td>
-                            <td>2023-10-24</td>
-                            <td><a href="#" class="action-link" onclick="viewReport('8211'); return false;">View</a></td>
-                        </tr>
-                        <tr>
-                            <td><a href="#" class="id-link">#8210</a></td>
-                            <td>Sampah Tidak Diangkut</td>
-                            <td>Complaint</td>
-                            <td><span class="badge badge-pending">Pending</span></td>
-                            <td>2023-10-23</td>
-                            <td><a href="#" class="action-link" onclick="viewReport('8210'); return false;">View</a></td>
-                        </tr>
-                        <tr>
-                            <td><a href="#" class="id-link">#8209</a></td>
-                            <td>Program Pelatihan Pemuda</td>
-                            <td>Aspiration</td>
-                            <td><span class="badge badge-resolved">Resolved</span></td>
-                            <td>2023-10-22</td>
-                            <td><a href="#" class="action-link" onclick="viewReport('8209'); return false;">View</a></td>
-                        </tr>
-                        <tr>
-                            <td><a href="#" class="id-link">#8208</a></td>
-                            <td>Pengadaan Air Bersih</td>
-                            <td>Complaint</td>
-                            <td><span class="badge badge-progress">In Progress</span></td>
-                            <td>2023-10-21</td>
-                            <td><a href="#" class="action-link" onclick="viewReport('8208'); return false;">View</a></td>
+                            <td colspan="6" style="text-align: center; padding: 2rem;">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -226,16 +168,12 @@
 
             <div class="table-footer">
                 <div class="table-info">
-                    Showing 1 to 7 of 1,234 entries
+                    Showing 0 to 0 of 0 entries
                 </div>
                 <div class="pagination">
                     <button class="pagination-btn" disabled>Previous</button>
                     <button class="pagination-btn active">1</button>
-                    <button class="pagination-btn">2</button>
-                    <button class="pagination-btn">3</button>
-                    <button class="pagination-btn">...</button>
-                    <button class="pagination-btn">176</button>
-                    <button class="pagination-btn">Next</button>
+                    <button class="pagination-btn" disabled>Next</button>
                 </div>
             </div>
         </section>
@@ -251,54 +189,45 @@
                 <div class="report-detail-section">
                     <div class="report-header">
                         <div>
-                            <span class="report-id" id="reportId">#8214</span>
-                            <span class="report-category" id="reportCategory">Keluhan</span>
+                            <span class="report-id" id="reportId">-</span>
+                            <span class="report-category" id="reportCategory">-</span>
                         </div>
-                        <span class="report-status badge badge-pending" id="reportStatus">Pending</span>
+                        <span class="report-status badge badge-pending" id="reportStatus">-</span>
                     </div>
                     
-                    <h3 class="report-title" id="reportTitle">Perbaikan Jalan Rusak</h3>
+                    <h3 class="report-title" id="reportTitle">Loading...</h3>
                     
                     <div class="report-grid">
                         <div class="report-item">
                             <label><i class="fa-solid fa-user"></i> Pelapor</label>
-                            <p id="reportAuthor">Ahmad Santoso</p>
+                            <p id="reportAuthor">-</p>
                         </div>
                         
                         <div class="report-item">
                             <label><i class="fa-solid fa-calendar"></i> Tanggal Laporan</label>
-                            <p id="reportDate">October 26, 2023</p>
+                            <p id="reportDate">-</p>
                         </div>
                         
                         <div class="report-item">
                             <label><i class="fa-solid fa-location-dot"></i> Lokasi</label>
-                            <p id="reportLocation">Jl. Merdeka No. 10, RT 05</p>
+                            <p id="reportLocation">-</p>
                         </div>
                         
                         <div class="report-item">
                             <label><i class="fa-solid fa-envelope"></i> Email Kontak</label>
-                            <p id="reportEmail">ahmad@email.com</p>
+                            <p id="reportEmail">-</p>
                         </div>
                     </div>
                     
                     <div class="report-description">
                         <label><i class="fa-solid fa-align-left"></i> Deskripsi</label>
-                        <p id="reportDescription">Jalan di RT 05 rusak parah dan membahayakan pengendara. Terdapat beberapa lubang besar yang dapat menyebabkan kecelakaan. Perlu segera dilakukan perbaikan untuk keamanan warga.</p>
+                        <p id="reportDescription">-</p>
                     </div>
                     
                     <div class="report-attachments">
                         <label><i class="fa-solid fa-paperclip"></i> Lampiran</label>
                         <div class="attachment-list" id="reportAttachments">
-                            <a href="#" class="attachment-item">
-                                <i class="fa-solid fa-file-image"></i>
-                                <span>foto-jalan-rusak-1.jpg</span>
-                                <span class="attachment-size">2.4 MB</span>
-                            </a>
-                            <a href="#" class="attachment-item">
-                                <i class="fa-solid fa-file-image"></i>
-                                <span>foto-jalan-rusak-2.jpg</span>
-                                <span class="attachment-size">1.8 MB</span>
-                            </a>
+                            <p style="color: #888; font-size: 0.9rem;">Tidak ada lampiran</p>
                         </div>
                     </div>
                 </div>

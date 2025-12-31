@@ -1,146 +1,103 @@
-// Dashboard Reports Management
+// Dashboard Reports Management - Backend Integration
+// API_BASE_URL is defined in admin.js
 
-// Sample report data - Backend will replace with API calls
-const reportsData = {
-    '8214': {
-        id: '8214',
-        title: 'Perbaikan Jalan Rusak',
-        description: 'Jalan di RT 05 rusak parah dan membahayakan pengendara. Terdapat beberapa lubang besar yang dapat menyebabkan kecelakaan. Perlu segera dilakukan perbaikan untuk keamanan warga.',
-        category: 'Keluhan',
-        status: 'resolved',
-        author: 'Ahmad Santoso',
-        email: 'ahmad@email.com',
-        location: 'Jl. Merdeka No. 10, RT 05',
-        date: '26 Oktober 2023',
-        attachments: [
-            { name: 'foto-jalan-rusak-1.jpg', size: '2.4 MB' },
-            { name: 'foto-jalan-rusak-2.jpg', size: '1.8 MB' }
-        ]
-    },
-    '8213': {
-        id: '8213',
-        title: 'Lampu Jalan Mati',
-        description: 'Lampu jalan di Jl. Merdeka sudah mati 2 minggu, mengurangi keamanan warga di malam hari.',
-        category: 'Keluhan',
-        status: 'in-progress',
-        author: 'Siti Aminah',
-        email: 'siti@email.com',
-        location: 'Jl. Merdeka, RT 02',
-        date: '25 Oktober 2023',
-        attachments: [
-            { name: 'foto-lampu-mati.jpg', size: '1.2 MB' }
-        ]
-    },
-    '8212': {
-        id: '8212',
-        title: 'Ide Festival Desa',
-        description: 'Usulan untuk mengadakan festival budaya desa yang melibatkan seluruh warga.',
-        category: 'Saran',
-        status: 'pending',
-        author: 'Budi Hartono',
-        email: 'budi@email.com',
-        location: 'Desa Sukamaju',
-        date: '25 Oktober 2023',
-        attachments: []
-    },
-    '8211': {
-        id: '8211',
-        title: 'Masalah Keamanan Lingkungan',
-        description: 'Peningkatan keamanan dengan ronda malam karena sering terjadi pencurian.',
-        category: 'Keluhan',
-        status: 'resolved',
-        author: 'Rudi Setiawan',
-        email: 'rudi@email.com',
-        location: 'RT 03 RW 01',
-        date: '24 Oktober 2023',
-        attachments: []
-    },
-    '8210': {
-        id: '8210',
-        title: 'Sampah Tidak Diangkut',
-        description: 'Sampah di TPS sudah menumpuk 3 hari dan menimbulkan bau tidak sedap.',
-        category: 'Keluhan',
-        status: 'pending',
-        author: 'Dewi Lestari',
-        email: 'dewi@email.com',
-        location: 'TPS RT 05',
-        date: '23 Oktober 2023',
-        attachments: [
-            { name: 'foto-sampah.jpg', size: '1.5 MB' }
-        ]
-    },
-    '8209': {
-        id: '8209',
-        title: 'Program Pelatihan Pemuda',
-        description: 'Usulan pelatihan kewirausahaan untuk pemuda desa agar mandiri.',
-        category: 'Saran',
-        status: 'resolved',
-        author: 'Linda Wijaya',
-        email: 'linda@email.com',
-        location: 'Balai Desa',
-        date: '22 Oktober 2023',
-        attachments: []
-    },
-    '8208': {
-        id: '8208',
-        title: 'Pengadaan Air Bersih',
-        description: 'Perlu penambahan fasilitas air bersih di RT 03 karena sumber air terbatas.',
-        category: 'Keluhan',
-        status: 'in-progress',
-        author: 'Ahmad Yusuf',
-        email: 'yusuf@email.com',
-        location: 'RT 03',
-        date: '21 Oktober 2023',
-        attachments: []
+// Open Report Modal - Fetch from Backend
+async function viewReport(reportId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/laporan/${reportId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load report details');
+        
+        const result = await response.json();
+        const report = result.data;
+        
+        // Populate modal fields
+        document.getElementById('reportId').textContent = report.nomor_laporan;
+        document.getElementById('reportTitle').textContent = report.judul;
+        document.getElementById('reportDescription').textContent = report.deskripsi;
+        document.getElementById('reportCategory').textContent = report.kategori;
+        document.getElementById('reportAuthor').textContent = report.nama_warga || report.warga_id?.user_warga || 'N/A';
+        document.getElementById('reportEmail').textContent = report.warga_id?.email || 'N/A';
+        document.getElementById('reportLocation').textContent = report.lokasi;
+        
+        const formattedDate = new Date(report.createdAt).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        document.getElementById('reportDate').textContent = formattedDate;
+        
+        // Set status badge
+        const statusBadge = document.getElementById('reportStatus');
+        const statusClass = getStatusBadgeClass(report.status_laporan);
+        statusBadge.className = `report-status badge ${statusClass}`;
+        statusBadge.textContent = report.status_laporan;
+        
+        // Populate attachments
+        const attachmentsList = document.getElementById('reportAttachments');
+        if (report.gambar) {
+            attachmentsList.innerHTML = `
+                <a href="${report.gambar}" target="_blank" class="attachment-item">
+                    <i class="fa-solid fa-file-image"></i>
+                    <span>Foto Laporan</span>
+                    <span class="attachment-size">View</span>
+                </a>
+            `;
+        } else {
+            attachmentsList.innerHTML = '<p style="color: #888; font-size: 0.9rem;">Tidak ada lampiran</p>';
+        }
+        
+        // Add AI Analysis section if available
+        if (report.kategori_ai || report.sentimen_ai || report.keywords_ai) {
+            addAIAnalysisSection(report);
+        }
+        
+        // Open modal
+        document.getElementById('reportModal').classList.add('active');
+        
+    } catch (error) {
+        console.error('Error loading report:', error);
+        alert('Gagal memuat detail laporan');
     }
-};
+}
 
-// Open Report Modal
-function viewReport(reportId) {
-    const reportData = reportsData[reportId] || reportsData['8214'];
+function getStatusBadgeClass(status) {
+    const statusMap = {
+        'Belum dikerjakan': 'badge-pending',
+        'Sedang dikerjakan': 'badge-progress',
+        'Selesai': 'badge-resolved'
+    };
+    return statusMap[status] || 'badge-pending';
+}
+
+function addAIAnalysisSection(report) {
+    const modalBody = document.querySelector('.modal-body .report-detail-section');
     
-    // Populate modal fields
-    document.getElementById('reportId').textContent = `#${reportData.id}`;
-    document.getElementById('reportTitle').textContent = reportData.title;
-    document.getElementById('reportDescription').textContent = reportData.description;
-    document.getElementById('reportCategory').textContent = reportData.category;
-    document.getElementById('reportAuthor').textContent = reportData.author;
-    document.getElementById('reportEmail').textContent = reportData.email;
-    document.getElementById('reportLocation').textContent = reportData.location;
-    document.getElementById('reportDate').textContent = reportData.date;
+    // Remove existing AI section if any
+    const existingAI = document.getElementById('aiAnalysisSection');
+    if (existingAI) existingAI.remove();
     
-    // Set status badge
-    const statusBadge = document.getElementById('reportStatus');
-    let statusClass = 'badge-pending';
-    let statusText = 'Menunggu';
+    const aiSection = document.createElement('div');
+    aiSection.id = 'aiAnalysisSection';
+    aiSection.className = 'report-description';
+    aiSection.innerHTML = `
+        <label><i class="fa-solid fa-brain"></i> Analisis AI</label>
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+            ${report.kategori_ai ? `<p><strong>Kategori AI:</strong> ${report.kategori_ai}</p>` : ''}
+            ${report.sentimen_ai ? `<p><strong>Sentimen:</strong> ${report.sentimen_ai}</p>` : ''}
+            ${report.keywords_ai && report.keywords_ai.length > 0 ? `
+                <p><strong>Keywords:</strong> ${report.keywords_ai.join(', ')}</p>
+            ` : ''}
+        </div>
+    `;
     
-    if (reportData.status === 'in-progress') {
-        statusClass = 'badge-progress';
-        statusText = 'Sedang Diproses';
-    } else if (reportData.status === 'resolved') {
-        statusClass = 'badge-resolved';
-        statusText = 'Selesai';
-    }
-    
-    statusBadge.className = `report-status badge ${statusClass}`;
-    statusBadge.textContent = statusText;
-    
-    // Populate attachments
-    const attachmentsList = document.getElementById('reportAttachments');
-    if (reportData.attachments.length > 0) {
-        attachmentsList.innerHTML = reportData.attachments.map(att => `
-            <a href="#" class="attachment-item">
-                <i class="fa-solid fa-file-image"></i>
-                <span>${att.name}</span>
-                <span class="attachment-size">${att.size}</span>
-            </a>
-        `).join('');
-    } else {
-        attachmentsList.innerHTML = '<p style="color: #888; font-size: 0.9rem;">Tidak ada lampiran</p>';
-    }
-    
-    // Open modal
-    document.getElementById('reportModal').classList.add('active');
+    // Insert before attachments section
+    const attachmentsSection = document.querySelector('.report-attachments');
+    modalBody.insertBefore(aiSection, attachmentsSection);
 }
 
 // Close Report Modal
