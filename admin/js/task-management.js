@@ -1,7 +1,7 @@
-const PRIORITY_COLUMNS = {
-  prioritasTinggi: "tinggi",
-  prioritasSedang: "sedang",
-  prioritasRendah: "rendah",
+const STATUS_CODES = {
+  "Belum dikerjakan": "belum",
+  "Sedang dikerjakan": "sedang",
+  Selesai: "selesai",
 };
 
 const STATUS_LABELS = {
@@ -16,9 +16,20 @@ const STATUS_CLASSES = {
   selesai: "status-done",
 };
 
-let taskCache = [];
+const PRIORITY_LABELS = {
+  tinggi: "Prioritas Tinggi",
+  sedang: "Prioritas Sedang",
+  rendah: "Prioritas Rendah",
+};
+
+const PRIORITY_BADGES = {
+  tinggi: "detail-priority priority-high",
+  sedang: "detail-priority priority-medium",
+  rendah: "detail-priority priority-low",
+};
+
 let laporanCache = [];
-let petugasCache = [];
+let taskCache = [];
 let currentSearchTerm = "";
 let searchTimer;
 
@@ -27,42 +38,83 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function bootstrapTaskManagement() {
-  await Promise.all([loadReferenceData(), loadTasks(), refreshNotificationBadge()]);
+  await loadBoardData();
   initTaskSearch();
-  initAssignForm();
+  initForms();
+  refreshNotificationBadge();
 }
 
-async function loadReferenceData() {
-  try {
-    const [laporanRes, petugasRes] = await Promise.all([
-      requestJSON(`/api/laporan/all?limit=100&status=${encodeURIComponent("Belum dikerjakan")}`),
-      requestJSON("/api/petugas?isActive=true"),
-    ]);
-    laporanCache = laporanRes.data || [];
-    petugasCache = petugasRes.data || [];
-    renderReportOptions();
-    renderPetugasOptions();
-  } catch (error) {
-    showNotification(error.message || "Gagal memuat data referensi", "error");
-  }
-}
-
-async function loadTasks(searchTerm = "") {
+async function loadBoardData(searchTerm = "") {
   try {
     currentSearchTerm = searchTerm;
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ limit: 200 });
     if (searchTerm) {
       params.append("search", searchTerm);
     }
-    const queryString = params.toString();
-    const endpoint = queryString ? `/api/tasks?${queryString}` : "/api/tasks";
-    const response = await requestJSON(endpoint);
-    taskCache = response.data || [];
+    const response = await requestJSON(`/api/laporan/all?${params.toString()}`);
+    laporanCache = Array.isArray(response.data) ? response.data : [];
+    taskCache = laporanCache.map(transformLaporanToTask);
     renderTaskBoard(taskCache);
-    renderStats(response.stats);
+    renderStatsFromTasks(taskCache);
+    renderReportOptions(laporanCache);
   } catch (error) {
     showNotification(error.message || "Gagal memuat laporan", "error");
   }
+}
+
+function transformLaporanToTask(laporan) {
+  const statusCode = STATUS_CODES[laporan.status_laporan] || "belum";
+  return {
+    _id: laporan._id,
+    nomor: laporan.nomor_laporan,
+    title: laporan.judul || "Tanpa Judul",
+    description: laporan.deskripsi || "",
+    status: statusCode,
+    priority: derivePriority(laporan),
+    reporter: laporan.nama_warga || "Anonim",
+    kategori: laporan.kategori || laporan.kategori_ai || "Tidak diketahui",
+    lokasi: laporan.lokasi || "Tidak diketahui",
+    createdAt: laporan.createdAt,
+    updatedAt: laporan.updatedAt,
+    notes: laporan.komentar || "",
+    attachments: laporan.gambar ? [laporan.gambar] : [],
+    history: buildHistoryFromLaporan(laporan),
+  };
+}
+
+function derivePriority(laporan) {
+  const category = (laporan.kategori_ai || laporan.kategori || "").toLowerCase();
+  const sentimen = (laporan.sentimen_ai || "").toLowerCase();
+  if (laporan.status_laporan === "Selesai") {
+    return "rendah";
+  }
+  if (["infrastruktur", "keamanan", "kesehatan"].includes(category)) {
+    return "tinggi";
+  }
+  if (["lingkungan", "pelayanan", "sosial"].includes(category)) {
+    return "sedang";
+  }
+  if (sentimen === "negatif") {
+    return "tinggi";
+  }
+  return "sedang";
+}
+
+function buildHistoryFromLaporan(laporan) {
+  const history = [];
+  history.push({
+    action: "Laporan Dibuat",
+    description: `Dikirim oleh ${laporan.nama_warga || "Anonim"}`,
+    createdAt: laporan.createdAt,
+  });
+  if (laporan.updatedAt && laporan.updatedAt !== laporan.createdAt) {
+    history.push({
+      action: "Status Terbaru",
+      description: laporan.status_laporan,
+      createdAt: laporan.updatedAt,
+    });
+  }
+  return history;
 }
 
 function renderTaskBoard(tasks) {
@@ -76,25 +128,43 @@ function renderTaskBoard(tasks) {
       column.innerHTML = "";
     }
   });
+  const grouped = { tinggi: [], sedang: [], rendah: [] };
   tasks.forEach((task) => {
-    const column = columns[task.priority] || columns.sedang;
-    if (column) {
-      column.appendChild(createTaskCard(task));
+    const priority = task.priority || "sedang";
+    if (!grouped[priority]) {
+      grouped[priority] = [];
     }
+    grouped[priority].push(task);
   });
-  updateTaskCounts();
-  initDragAndDrop();
+  if (columns.tinggi) {
+    grouped.tinggi
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .forEach((task) => columns.tinggi.appendChild(createTaskCard(task)));
+  }
+  if (columns.sedang) {
+    grouped.sedang
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .forEach((task) => columns.sedang.appendChild(createTaskCard(task)));
+  }
+  if (columns.rendah) {
+    grouped.rendah
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .forEach((task) => columns.rendah.appendChild(createTaskCard(task)));
+  }
+  updateTaskCounts(grouped);
+}
+
+function capitalize(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function createTaskCard(task) {
   const card = createElement("div", "task-card");
-  card.draggable = true;
   card.dataset.taskId = task._id;
   card.dataset.priority = task.priority;
 
   const header = createElement("div", "task-header");
-  const displayId = task.taskNumber || task.laporan?.nomor_laporan || task._id.slice(-5);
-  header.appendChild(createElement("span", "task-id", `#${displayId}`));
+  header.appendChild(createElement("span", "task-id", `#${task.nomor || task._id.slice(-5)}`));
   header.appendChild(
     createElement(
       "div",
@@ -104,37 +174,19 @@ function createTaskCard(task) {
   );
 
   const titleEl = createElement("h4", "task-title", task.title || "-");
-  const descEl = createElement(
-    "p",
-    "task-description",
-    truncateText(task.description || "-", 140)
-  );
+  const descEl = createElement("p", "task-description", truncateText(task.description, 140));
 
   const meta = createElement("div", "task-meta");
-  const assignee = createElement("div", "task-assignee");
-  const assigneeIcon = createElement("i", "fa-solid fa-user");
-  const assigneeSpan = createElement(
-    "span",
-    "",
-    task.assignedTo?.name || task.assignedTo?.email || "Belum ditugaskan"
-  );
-  assignee.append(assigneeIcon, assigneeSpan);
+  const reporter = createElement("div", "task-assignee");
+  reporter.innerHTML = `<i class="fa-solid fa-user"></i><span>${task.reporter}</span>`;
   const dateWrapper = createElement("div", "task-date");
-  const dateIcon = createElement("i", "fa-solid fa-calendar");
-  const dateSpan = createElement(
-    "span",
-    "",
-    formatReadableDate(task.dueDate || task.laporan?.createdAt)
-  );
-  dateWrapper.append(dateIcon, dateSpan);
-  meta.append(assignee, dateWrapper);
+  dateWrapper.innerHTML = `<i class="fa-solid fa-calendar"></i><span>${formatReadableDate(task.createdAt)}</span>`;
+  meta.append(reporter, dateWrapper);
 
   const actions = createElement("div", "task-actions");
   const viewBtn = createActionButton("view", "fa-solid fa-eye", () => viewTask(task._id));
   const editBtn = createActionButton("edit", "fa-solid fa-pen", () => editTask(task._id));
-  const deleteBtn = createActionButton("delete", "fa-solid fa-trash", () => deleteTask(task._id));
-  deleteBtn.classList.add("btn-danger");
-  actions.append(viewBtn, editBtn, deleteBtn);
+  actions.append(viewBtn, editBtn);
 
   card.append(header, titleEl, descEl, meta, actions);
   return card;
@@ -148,110 +200,26 @@ function createActionButton(action, iconClass, handler) {
   return button;
 }
 
-function initDragAndDrop() {
-  const cards = document.querySelectorAll(".task-card");
-  const taskLists = document.querySelectorAll(".task-list");
-
-  cards.forEach((card) => {
-    card.addEventListener("dragstart", () => {
-      card.classList.add("dragging");
-    });
-    card.addEventListener("dragend", () => {
-      card.classList.remove("dragging");
-      const parentList = card.closest(".task-list");
-      if (!parentList) {
-        return;
-      }
-      const newPriority = PRIORITY_COLUMNS[parentList.id];
-      if (newPriority && newPriority !== card.dataset.priority) {
-        updateTaskPriorityRequest(card.dataset.taskId, newPriority);
-      }
-    });
-  });
-
-  taskLists.forEach((list) => {
-    list.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      list.classList.add("drag-over");
-      const afterElement = getDragAfterElement(list, event.clientY);
-      const dragging = document.querySelector(".dragging");
-      if (!dragging) {
-        return;
-      }
-      if (!afterElement) {
-        list.appendChild(dragging);
-      } else {
-        list.insertBefore(dragging, afterElement);
-      }
-    });
-    list.addEventListener("dragleave", (event) => {
-      if (!list.contains(event.relatedTarget)) {
-        list.classList.remove("drag-over");
-      }
-    });
-    list.addEventListener("drop", (event) => {
-      event.preventDefault();
-      list.classList.remove("drag-over");
-    });
-  });
-
-  document.addEventListener("dragend", () => {
-    taskLists.forEach((list) => list.classList.remove("drag-over"));
-  });
-}
-
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll(".task-card:not(.dragging)")];
-  return draggableElements.reduce(
-    (closest, child) => {
-      const box = child.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-      if (offset < 0 && offset > closest.offset) {
-        return { offset, element: child };
-      }
-      return closest;
-    },
-    { offset: Number.NEGATIVE_INFINITY }
-  ).element;
-}
-
-async function updateTaskPriorityRequest(taskId, priority) {
-  try {
-    await requestJSON(`/api/tasks/${taskId}/priority`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priority }),
-    });
-    showNotification(`Prioritas diperbarui ke ${priority}`, "success");
-    await loadTasks(currentSearchTerm);
-  } catch (error) {
-    showNotification(error.message || "Gagal memperbarui prioritas", "error");
-    await loadTasks(currentSearchTerm);
+function updateTaskCounts(grouped) {
+  const columnCounts = document.querySelectorAll(".task-column .task-count");
+  if (columnCounts.length >= 3) {
+    columnCounts[0].textContent = grouped.tinggi.length;
+    columnCounts[1].textContent = grouped.sedang.length;
+    columnCounts[2].textContent = grouped.rendah.length;
   }
 }
 
-function updateTaskCounts() {
-  const tinggi = document.querySelectorAll("#prioritasTinggi .task-card").length;
-  const sedang = document.querySelectorAll("#prioritasSedang .task-card").length;
-  const rendah = document.querySelectorAll("#prioritasRendah .task-card").length;
-  const columns = document.querySelectorAll(".task-column .task-count");
-  if (columns.length >= 3) {
-    columns[0].textContent = tinggi;
-    columns[1].textContent = sedang;
-    columns[2].textContent = rendah;
-  }
-}
-
-function renderStats(stats) {
-  if (!stats) {
-    return;
-  }
+function renderStatsFromTasks(tasks) {
+  const totals = { belum: 0, sedang: 0, selesai: 0 };
+  tasks.forEach((task) => {
+    totals[task.status] = (totals[task.status] || 0) + 1;
+  });
   const statValues = document.querySelectorAll(".stat-value");
   if (statValues.length >= 4) {
-    statValues[0].textContent = stats.total || 0;
-    statValues[1].textContent = stats.status?.belum || 0;
-    statValues[2].textContent = stats.status?.sedang || 0;
-    statValues[3].textContent = stats.status?.selesai || 0;
+    statValues[0].textContent = tasks.length;
+    statValues[1].textContent = totals.belum;
+    statValues[2].textContent = totals.sedang;
+    statValues[3].textContent = totals.selesai;
   }
 }
 
@@ -264,69 +232,30 @@ function initTaskSearch() {
     clearTimeout(searchTimer);
     const value = event.target.value.trim();
     searchTimer = setTimeout(() => {
-      loadTasks(value);
+      loadBoardData(value);
     }, 400);
   });
 }
 
-function renderReportOptions() {
+function renderReportOptions(laporan) {
   const reportSelect = document.getElementById("reportSelect");
   if (!reportSelect) {
     return;
   }
-  const currentValue = reportSelect.value;
   reportSelect.innerHTML = '<option value="">Pilih laporan...</option>';
-  laporanCache.forEach((laporan) => {
+  laporan.forEach((item) => {
     const option = document.createElement("option");
-    option.value = laporan._id;
-    option.textContent = `${laporan.nomor_laporan} - ${laporan.judul}`;
+    option.value = item._id;
+    option.textContent = `${item.nomor_laporan} - ${item.judul}`;
     reportSelect.appendChild(option);
   });
-  if (currentValue) {
-    reportSelect.value = currentValue;
-  }
-}
-
-function renderPetugasOptions() {
-  const assignSelect = document.getElementById("assigneeSelect");
-  const editSelect = document.getElementById("editAssigneeSelect");
-  if (assignSelect) {
-    const currentAssign = assignSelect.value;
-    assignSelect.innerHTML = '<option value="">Pilih petugas...</option>';
-    petugasCache.forEach((petugas) => {
-      const option = document.createElement("option");
-      option.value = petugas._id;
-      option.textContent = petugas.name || petugas.email;
-      assignSelect.appendChild(option);
-    });
-    if (currentAssign) {
-      assignSelect.value = currentAssign;
-    }
-  }
-  if (editSelect) {
-    const currentEdit = editSelect.value;
-    editSelect.innerHTML = '<option value="">Belum ditugaskan</option>';
-    petugasCache.forEach((petugas) => {
-      const option = document.createElement("option");
-      option.value = petugas._id;
-      option.textContent = petugas.name || petugas.email;
-      editSelect.appendChild(option);
-    });
-    if (currentEdit) {
-      editSelect.value = currentEdit;
-    }
-  }
 }
 
 function openAssignModal() {
-  document.getElementById("assignModal")?.classList.add("active");
+  showNotification("Penugasan akan tersedia setelah integrasi lanjutan", "info");
 }
 
-function closeAssignModal() {
-  const modal = document.getElementById("assignModal");
-  modal?.classList.remove("active");
-  document.getElementById("assignTaskForm")?.reset();
-}
+function closeAssignModal() {}
 
 function closeViewModal() {
   const modal = document.getElementById("viewModal");
@@ -352,12 +281,8 @@ function closeEditModal() {
 }
 
 window.addEventListener("click", (event) => {
-  const assignModal = document.getElementById("assignModal");
   const viewModal = document.getElementById("viewModal");
   const editModal = document.getElementById("editModal");
-  if (event.target === assignModal) {
-    closeAssignModal();
-  }
   if (event.target === viewModal) {
     closeViewModal();
   }
@@ -366,90 +291,30 @@ window.addEventListener("click", (event) => {
   }
 });
 
-function initAssignForm() {
-  const assignForm = document.getElementById("assignTaskForm");
+function initForms() {
   const editForm = document.getElementById("editTaskForm");
-  if (assignForm) {
-    assignForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const payload = {
-        reportId: document.getElementById("reportSelect").value,
-        assigneeId: document.getElementById("assigneeSelect").value,
-        priority: document.getElementById("prioritySelect").value,
-        dueDate: document.getElementById("dueDate").value,
-        notes: document.getElementById("taskNotes").value,
-        sendNotification: document.getElementById("sendNotification").checked,
-      };
-      if (!payload.reportId || !payload.assigneeId || !payload.priority) {
-        showNotification("Harap lengkapi semua field wajib", "error");
-        return;
-      }
-      const submitBtn = assignForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menugaskan...';
-      submitBtn.disabled = true;
-      try {
-        await requestJSON("/api/tasks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        showNotification("Laporan berhasil ditugaskan", "success");
-        closeAssignModal();
-        await Promise.all([loadTasks(currentSearchTerm), loadReferenceData()]);
-      } catch (error) {
-        showNotification(error.message || "Gagal menugaskan laporan", "error");
-      } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-  }
   if (editForm) {
-    editForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const taskId = document.getElementById("editTaskId").value;
-      if (!taskId) {
-        return;
-      }
-      const payload = {
-        title: document.getElementById("editTaskTitle").value,
-        description: document.getElementById("editTaskDescription").value,
-        assigneeId: document.getElementById("editAssigneeSelect").value,
-        status: document.getElementById("editStatusSelect").value,
-        priority: document.getElementById("editPrioritySelect").value,
-        dueDate: document.getElementById("editDueDate").value,
-        notes: document.getElementById("editTaskNotes").value,
-        sendNotification: document.getElementById("editSendNotification").checked,
-      };
-      const submitBtn = editForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-      submitBtn.disabled = true;
-      try {
-        await requestJSON(`/api/tasks/${taskId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        showNotification("Laporan berhasil diperbarui", "success");
-        closeEditModal();
-        await loadTasks(currentSearchTerm);
-      } catch (error) {
-        showNotification(error.message || "Gagal memperbarui laporan", "error");
-      } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }
-    });
+    editForm.addEventListener("submit", handleEditSubmit);
+  }
+  const assignSelect = document.getElementById("assigneeSelect");
+  if (assignSelect) {
+    assignSelect.innerHTML = '<option value="">Penugasan belum tersedia</option>';
+    assignSelect.disabled = true;
+  }
+  const editAssigneeSelect = document.getElementById("editAssigneeSelect");
+  if (editAssigneeSelect) {
+    editAssigneeSelect.innerHTML = '<option value="">Penugasan belum tersedia</option>';
+    editAssigneeSelect.disabled = true;
   }
 }
 
 async function viewTask(taskId) {
   try {
-    const response = await requestJSON(`/api/tasks/${taskId}`);
-    populateViewModal(response.data);
+    const response = await requestJSON(`/api/laporan/${taskId}`);
+    const detail = transformLaporanToTask(response.data);
     document.getElementById("viewModal")?.classList.add("active");
+    document.getElementById("viewModal").dataset.taskId = taskId;
+    populateViewModal(detail);
   } catch (error) {
     showNotification(error.message || "Gagal memuat detail laporan", "error");
   }
@@ -457,133 +322,178 @@ async function viewTask(taskId) {
 
 async function editTask(taskId) {
   try {
-    const response = await requestJSON(`/api/tasks/${taskId}`);
-    populateEditForm(response.data);
+    const response = await requestJSON(`/api/laporan/${taskId}`);
+    const detail = transformLaporanToTask(response.data);
+    populateEditForm(detail);
     document.getElementById("editModal")?.classList.add("active");
   } catch (error) {
     showNotification(error.message || "Gagal memuat data laporan", "error");
   }
 }
 
-async function deleteTask(taskId) {
-  if (!confirm(`Apakah Anda yakin ingin menghapus laporan ini?`)) {
+async function handleEditSubmit(event) {
+  event.preventDefault();
+  const taskId = document.getElementById("editTaskId").value;
+  if (!taskId) {
     return;
   }
+  const statusCode = document.getElementById("editStatusSelect").value;
+  const statusText = STATUS_LABELS[statusCode] || "Belum dikerjakan";
+  const komentar = document.getElementById("editTaskNotes").value;
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const original = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  submitBtn.disabled = true;
   try {
-    await requestJSON(`/api/tasks/${taskId}`, { method: "DELETE" });
-    showNotification("Laporan berhasil dihapus", "success");
-    await loadTasks(currentSearchTerm);
-    await loadReferenceData();
+    await requestJSON(`/api/laporan/${taskId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status_laporan: statusText, komentar }),
+    });
+    showNotification("Status laporan berhasil diperbarui", "success");
+    closeEditModal();
+    await loadBoardData(currentSearchTerm);
   } catch (error) {
-    showNotification(error.message || "Gagal menghapus laporan", "error");
+    showNotification(error.message || "Gagal memperbarui laporan", "error");
+  } finally {
+    submitBtn.innerHTML = original;
+    submitBtn.disabled = false;
   }
 }
 
 function populateViewModal(task) {
   const viewModal = document.getElementById("viewModal");
-  if (!viewModal) {
+  const contentContainer = document.getElementById("viewTaskContent");
+  if (!viewModal || !contentContainer) {
     return;
   }
   viewModal.dataset.taskId = task._id;
-  const displayId = task.taskNumber || task.laporan?.nomor_laporan || task._id.slice(-5);
-  document.getElementById("viewTaskId").textContent = `#${displayId}`;
-  const priorityBadge = document.getElementById("viewTaskPriority");
-  priorityBadge.textContent =
-    task.priority === "tinggi"
-      ? "Prioritas Tinggi"
-      : task.priority === "rendah"
-      ? "Prioritas Rendah"
-      : "Prioritas Sedang";
-  priorityBadge.className =
-    task.priority === "tinggi"
-      ? "detail-priority priority-high"
-      : task.priority === "rendah"
-      ? "detail-priority priority-low"
-      : "detail-priority priority-medium";
-  const statusBadge = document.getElementById("viewTaskStatus");
-  statusBadge.textContent = STATUS_LABELS[task.status] || STATUS_LABELS.belum;
-  statusBadge.className = `detail-status badge ${
+  const priorityLabel = PRIORITY_LABELS[task.priority] || PRIORITY_LABELS.sedang;
+  const priorityClass = PRIORITY_BADGES[task.priority] || PRIORITY_BADGES.sedang;
+  const statusLabel = STATUS_LABELS[task.status] || STATUS_LABELS.belum;
+  const statusClass =
     task.status === "selesai"
-      ? "badge-resolved"
+      ? "badge badge-resolved"
       : task.status === "sedang"
-      ? "badge-progress"
-      : "badge-pending"
-  }`;
-  document.getElementById("viewTaskTitle").textContent = task.title || "-";
-  document.getElementById("viewTaskDescription").textContent = task.description || "-";
-  document.getElementById("viewTaskAssignee").textContent =
-    task.assignedTo?.name || task.assignedTo?.email || "-";
-  document.getElementById("viewTaskCreated").textContent = formatFullDate(
-    task.laporan?.createdAt || task.createdAt
-  );
-  document.getElementById("viewTaskDue").textContent = formatFullDate(task.dueDate);
-  document.getElementById("viewTaskCategory").textContent =
-    task.laporan?.kategori || task.laporan?.kategori_ai || "-";
-  document.getElementById("viewTaskNotes").textContent = task.notes || "-";
-  renderAttachmentList(task);
-  renderTimeline(task.history);
+      ? "badge badge-progress"
+      : "badge badge-pending";
+  const attachmentsHTML = buildAttachmentHTML(task);
+  const timelineHTML = buildTimelineHTML(task.history);
+  const detailHTML = `
+    <div class="detail-header">
+      <div>
+        <span class="detail-id">#${task.nomor || task._id.slice(-5)}</span>
+        <span class="${priorityClass}">${priorityLabel}</span>
+      </div>
+      <span class="detail-status ${statusClass}">${statusLabel}</span>
+    </div>
+    <h3 class="detail-title">${task.title || "-"}</h3>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <label><i class="fa-solid fa-user"></i> Dilaporkan Oleh</label>
+        <p>${task.reporter}</p>
+      </div>
+      <div class="detail-item">
+        <label><i class="fa-solid fa-calendar"></i> Tanggal Dibuat</label>
+        <p>${formatFullDate(task.createdAt)}</p>
+      </div>
+      <div class="detail-item">
+        <label><i class="fa-solid fa-location-dot"></i> Lokasi</label>
+        <p>${task.lokasi}</p>
+      </div>
+      <div class="detail-item">
+        <label><i class="fa-solid fa-list"></i> Kategori</label>
+        <p>${task.kategori}</p>
+      </div>
+    </div>
+    <div class="detail-description">
+      <label><i class="fa-solid fa-align-left"></i> Deskripsi</label>
+      <p>${task.description || "-"}</p>
+    </div>
+    <div class="detail-notes">
+      <label><i class="fa-solid fa-note-sticky"></i> Catatan Tambahan</label>
+      <p>${task.notes || "-"}</p>
+    </div>
+    <div class="detail-attachments">
+      <label><i class="fa-solid fa-paperclip"></i> Lampiran</label>
+      <div class="attachment-list">${attachmentsHTML}</div>
+    </div>
+    <div class="detail-timeline">
+      <label><i class="fa-solid fa-timeline"></i> Riwayat Aktivitas</label>
+      <div class="timeline-list">${timelineHTML}</div>
+    </div>
+  `;
+  contentContainer.innerHTML = detailHTML;
 }
 
 function populateEditForm(task) {
   document.getElementById("editTaskId").value = task._id;
-  document.getElementById("editTaskTitle").value = task.title || "";
-  document.getElementById("editTaskDescription").value = task.description || "";
-  document.getElementById("editStatusSelect").value = task.status || "belum";
-  document.getElementById("editPrioritySelect").value = task.priority || "sedang";
-  document.getElementById("editAssigneeSelect").value = task.assignedTo?._id || "";
-  document.getElementById("editDueDate").value = formatDateInput(task.dueDate);
+  const readOnlyFields = ["editTaskTitle", "editTaskDescription", "editDueDate"];
+  readOnlyFields.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = id === "editTaskTitle" ? task.title || "" : task.description || "";
+      if (id === "editDueDate") {
+        el.value = formatDateInput(task.createdAt);
+        el.readOnly = true;
+      } else {
+        el.readOnly = true;
+      }
+    }
+  });
+  const prioritySelect = document.getElementById("editPrioritySelect");
+  if (prioritySelect) {
+    prioritySelect.value = task.priority;
+    prioritySelect.disabled = true;
+  }
+  const assigneeSelect = document.getElementById("editAssigneeSelect");
+  if (assigneeSelect) {
+    assigneeSelect.value = "";
+    assigneeSelect.disabled = true;
+  }
+  document.getElementById("editStatusSelect").value = task.status;
   document.getElementById("editTaskNotes").value = task.notes || "";
-  document.getElementById("editSendNotification").checked = true;
+  document.getElementById("editSendNotification").checked = false;
 }
 
-function renderAttachmentList(task) {
-  const container = document.getElementById("viewTaskAttachments");
-  if (!container) {
-    return;
+function buildAttachmentHTML(task) {
+  if (!task.attachments || !task.attachments.length) {
+    return '<p class="empty-state">Tidak ada lampiran</p>';
   }
-  container.innerHTML = "";
-  const lampiran = task.laporan?.gambar;
-  if (!lampiran) {
-    container.innerHTML = '<p class="empty-state">Tidak ada lampiran</p>';
-    return;
-  }
-  const link = document.createElement("a");
-  link.href = lampiran;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.className = "attachment-item";
-  link.innerHTML = `<i class="fa-solid fa-file-image"></i><span>Buka Lampiran</span>`;
-  container.appendChild(link);
+  return task.attachments
+    .map(
+      (file, index) => `
+        <a href="${file}" target="_blank" rel="noopener" class="attachment-item">
+          <i class="fa-solid fa-file-image"></i>
+          <span>Lampiran ${index + 1}</span>
+        </a>
+      `
+    )
+    .join("");
 }
 
-function renderTimeline(history = []) {
-  const container = document.getElementById("viewTaskTimeline");
-  if (!container) {
-    return;
-  }
-  container.innerHTML = "";
+function buildTimelineHTML(history = []) {
   if (!history.length) {
-    container.innerHTML = '<p class="empty-state">Belum ada aktivitas</p>';
-    return;
+    return '<p class="empty-state">Belum ada aktivitas</p>';
   }
-  history
+  return history
     .slice()
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .forEach((item) => {
-      const timelineItem = createElement("div", "timeline-item");
-      const iconWrapper = createElement("div", "timeline-icon");
-      iconWrapper.innerHTML = '<i class="fa-solid fa-circle"></i>';
-      const content = createElement("div", "timeline-content");
-      content.appendChild(createElement("strong", "", item.action || "Aktivitas"));
-      content.appendChild(
-        createElement("p", "", item.description || "Perubahan dilakukan")
-      );
-      content.appendChild(
-        createElement("span", "timeline-date", formatDateTime(item.createdAt))
-      );
-      timelineItem.append(iconWrapper, content);
-      container.appendChild(timelineItem);
-    });
+    .map(
+      (item) => `
+        <div class="timeline-item">
+          <div class="timeline-icon">
+            <i class="fa-solid fa-circle"></i>
+          </div>
+          <div class="timeline-content">
+            <strong>${item.action || "Aktivitas"}</strong>
+            <p>${item.description || "Perubahan dilakukan"}</p>
+            <span class="timeline-date">${formatDateTime(item.createdAt)}</span>
+          </div>
+        </div>
+      `
+    )
+    .join("");
 }
 
 async function refreshNotificationBadge() {
@@ -601,7 +511,7 @@ async function refreshNotificationBadge() {
   }
 }
 
-function truncateText(text, limit) {
+function truncateText(text = "", limit) {
   if (!text) {
     return "-";
   }
