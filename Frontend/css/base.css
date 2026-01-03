@@ -5,6 +5,11 @@
     box-sizing: border-box;
 }
 
+/* Smooth Scroll */
+html {
+    scroll-behavior: smooth;
+}
+
 :root {
     --primary-color: #0066CC;
     --primary-hover: #0052A3;

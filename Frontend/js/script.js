@@ -48,23 +48,31 @@ function initializeNavigation() {
       });
     });
   }
+
+  // Smooth scroll for anchor links
+  initializeSmoothScroll();
 }
 
 // Smooth scrolling for anchor links
-document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-  anchor.addEventListener("click", function (e) {
-    e.preventDefault();
-    const target = document.querySelector(this.getAttribute("href"));
-    if (target) {
-      const offset = 80; // Account for fixed navbar
-      const targetPosition = target.offsetTop - offset;
-      window.scrollTo({
-        top: targetPosition,
-        behavior: "smooth",
-      });
-    }
+function initializeSmoothScroll() {
+  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+    anchor.addEventListener("click", function (e) {
+      const href = this.getAttribute("href");
+      if (href === "#") return;
+      
+      e.preventDefault();
+      const target = document.querySelector(href);
+      if (target) {
+        const offset = 80; // Account for fixed navbar
+        const targetPosition = target.offsetTop - offset;
+        window.scrollTo({
+          top: targetPosition,
+          behavior: "smooth",
+        });
+      }
+    });
   });
-});
+}
 
 // Add animation on scroll
 function initializeAnimations() {
