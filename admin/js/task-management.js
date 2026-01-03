@@ -156,6 +156,9 @@ function renderTaskBoard(tasks) {
       .forEach((task) => columns.rendah.appendChild(createTaskCard(task)));
   }
   updateTaskCounts(grouped);
+  
+  // Initialize drag and drop after rendering
+  initDragAndDrop();
 }
 
 function capitalize(text) {
@@ -166,6 +169,7 @@ function createTaskCard(task) {
   const card = createElement("div", "task-card");
   card.dataset.taskId = task._id;
   card.dataset.priority = task.priority;
+  card.draggable = true; // Enable drag and drop
 
   const header = createElement("div", "task-header");
   header.appendChild(createElement("span", "task-id", `#${task.nomor || task._id.slice(-5)}`));
@@ -639,4 +643,151 @@ function showNotification(message, type = "success") {
     notification.style.animation = "slideOut 0.3s ease";
     setTimeout(() => notification.remove(), 300);
   }, 4000);
+}
+
+// ========================================
+// Drag and Drop Functionality
+// ========================================
+
+let draggedCard = null;
+
+function initDragAndDrop() {
+  const taskCards = document.querySelectorAll('.task-card');
+  const taskLists = document.querySelectorAll('.task-list');
+
+  // Add drag events to cards
+  taskCards.forEach(card => {
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+  });
+
+  // Add drop events to columns
+  taskLists.forEach(list => {
+    list.addEventListener('dragover', handleDragOver);
+    list.addEventListener('dragenter', handleDragEnter);
+    list.addEventListener('dragleave', handleDragLeave);
+    list.addEventListener('drop', handleDrop);
+  });
+}
+
+function handleDragStart(e) {
+  draggedCard = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.dataset.taskId);
+  
+  // Add slight delay to show drag effect
+  setTimeout(() => {
+    this.style.opacity = '0.5';
+  }, 0);
+}
+
+function handleDragEnd(e) {
+  this.classList.remove('dragging');
+  this.style.opacity = '1';
+  draggedCard = null;
+  
+  // Remove drag-over class from all columns
+  document.querySelectorAll('.task-list').forEach(list => {
+    list.classList.remove('drag-over');
+  });
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+  this.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  // Only remove if leaving the actual list, not entering a child
+  if (!this.contains(e.relatedTarget)) {
+    this.classList.remove('drag-over');
+  }
+}
+
+async function handleDrop(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over');
+
+  if (!draggedCard) return;
+
+  const targetList = this;
+  const targetColumnId = targetList.id;
+  
+  // Determine new priority based on column
+  let newPriority;
+  if (targetColumnId === 'prioritasTinggi') {
+    newPriority = 'tinggi';
+  } else if (targetColumnId === 'prioritasSedang') {
+    newPriority = 'sedang';
+  } else if (targetColumnId === 'prioritasRendah') {
+    newPriority = 'rendah';
+  } else {
+    return;
+  }
+
+  const taskId = draggedCard.dataset.taskId;
+  const oldPriority = draggedCard.dataset.priority;
+
+  // If same column, just reorder visually
+  if (oldPriority === newPriority) {
+    targetList.appendChild(draggedCard);
+    return;
+  }
+
+  // Move card to new column
+  targetList.appendChild(draggedCard);
+  draggedCard.dataset.priority = newPriority;
+
+  // Update task cache
+  const task = taskCache.find(t => t._id === taskId);
+  if (task) {
+    task.priority = newPriority;
+  }
+
+  // Update column counts
+  updateColumnCounts();
+
+  // Show notification
+  showNotification(`Prioritas diubah ke ${PRIORITY_LABELS[newPriority]}`, 'success');
+
+  // Optional: Persist to backend (uncomment if API supports priority update)
+  // try {
+  //   await requestJSON(`/api/laporan/${taskId}`, {
+  //     method: 'PUT',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+  //     },
+  //     body: JSON.stringify({ priority: newPriority })
+  //   });
+  // } catch (error) {
+  //   showNotification('Gagal menyimpan perubahan prioritas', 'error');
+  // }
+}
+
+function updateColumnCounts() {
+  const columns = {
+    tinggi: document.getElementById('prioritasTinggi'),
+    sedang: document.getElementById('prioritasSedang'),
+    rendah: document.getElementById('prioritasRendah')
+  };
+
+  const counts = {
+    tinggi: columns.tinggi ? columns.tinggi.children.length : 0,
+    sedang: columns.sedang ? columns.sedang.children.length : 0,
+    rendah: columns.rendah ? columns.rendah.children.length : 0
+  };
+
+  const columnCountElements = document.querySelectorAll('.task-column .task-count');
+  if (columnCountElements.length >= 3) {
+    columnCountElements[0].textContent = counts.tinggi;
+    columnCountElements[1].textContent = counts.sedang;
+    columnCountElements[2].textContent = counts.rendah;
+  }
 }
