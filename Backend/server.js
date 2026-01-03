@@ -9,6 +9,9 @@ import { connectDB } from "./config/db.js";
 import wargaRouter from "./routes/wargaRoute.js";
 import laporanRouter from "./routes/laporanRoute.js";
 import adminRouter from "./routes/adminRoute.js";
+import taskRouter from "./routes/taskRoute.js";
+import petugasRouter from "./routes/petugasRoute.js";
+import notificationRouter from "./routes/notificationRoute.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -28,6 +31,9 @@ connectDB();
 app.use("/api/warga", wargaRouter);
 app.use("/api/laporan", laporanRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/tasks", taskRouter);
+app.use("/api/petugas", petugasRouter);
+app.use("/api/notifications", notificationRouter);
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../Frontend/index.html"));
