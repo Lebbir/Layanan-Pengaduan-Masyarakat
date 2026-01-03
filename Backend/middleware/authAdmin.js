@@ -23,6 +23,14 @@ const authAdmin = async (req, res, next) => {
       });
     }
 
+    // Validasi role administrator
+    if (admin.role !== "administrator") {
+      return res.status(403).json({
+        success: false,
+        message: "Akses ditolak. Hanya administrator yang diizinkan",
+      });
+    }
+
     req.admin = admin; // gunakan req.admin di controller admin
     next();
   } catch (error) {

@@ -5,7 +5,8 @@ const wargaSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     alamat: { type: String },
-    no_hp: { type: String }
+    no_hp: { type: String },
+    role: { type: String, default: "warga" }
 }, { minimize: false })
 
 const wargaModel = mongoose.models.warga || mongoose.model("warga", wargaSchema, "warga");

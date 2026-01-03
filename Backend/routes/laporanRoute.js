@@ -9,6 +9,7 @@ import {
   getStatistics,
 } from "../controller/laporanController.js";
 import multer from "multer";
+import authAdmin from "../middleware/authAdmin.js";
 
 const laporanRouter = express.Router();
 
@@ -41,10 +42,10 @@ laporanRouter.post("/buatlaporan", upload.single("upload_foto"), createLaporan);
 laporanRouter.get("/public", getPublicLaporan);
 laporanRouter.get("/public/:id", getPublicLaporanById);
 
-// Admin routes
-laporanRouter.get("/all", getAllLaporan);
-laporanRouter.get("/statistics", getStatistics);
-laporanRouter.get("/:id", getLaporanById);
-laporanRouter.put("/:id/status", updateStatusLaporan);
+// Admin routes (protected - only administrator can access)
+laporanRouter.get("/all", authAdmin, getAllLaporan);
+laporanRouter.get("/statistics", authAdmin, getStatistics);
+laporanRouter.get("/:id", authAdmin, getLaporanById);
+laporanRouter.put("/:id/status", authAdmin, updateStatusLaporan);
 
 export default laporanRouter;
