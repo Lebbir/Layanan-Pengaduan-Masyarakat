@@ -51,7 +51,11 @@ async function loadBoardData(searchTerm = "") {
     if (searchTerm) {
       params.append("search", searchTerm);
     }
-    const response = await requestJSON(`/api/laporan/all?${params.toString()}`);
+    const response = await requestJSON(`/api/laporan/all?${params.toString()}`, {
+      headers: {
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+            }
+    });
     laporanCache = Array.isArray(response.data) ? response.data : [];
     taskCache = laporanCache.map(transformLaporanToTask);
     renderTaskBoard(taskCache);
