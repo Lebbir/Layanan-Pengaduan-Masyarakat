@@ -1,5 +1,6 @@
 // Profile Management Script
-const API_URL = "http://localhost:3000/api/warga";
+import { API_BASE_URL } from './config.js';
+const API_URL = `${API_BASE_URL}/api/warga`;
 
 // Load Header and Footer Components
 async function loadComponent(elementId, componentPath) {

@@ -1,3 +1,7 @@
+// Load config
+import { API_BASE_URL } from './config.js';
+window.API_BASE_URL = API_BASE_URL;
+
 // Load Header and Footer Components
 const tokenExist = localStorage.getItem("token");
 
