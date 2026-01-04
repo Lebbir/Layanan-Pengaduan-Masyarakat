@@ -318,7 +318,11 @@ function initForms() {
 
 async function viewTask(taskId) {
   try {
-    const response = await requestJSON(`/api/laporan/${taskId}`);
+    const response = await requestJSON(`/api/laporan/${taskId}`,{
+      headers: {
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+            }
+    });
     const detail = transformLaporanToTask(response.data);
     document.getElementById("viewModal")?.classList.add("active");
     document.getElementById("viewModal").dataset.taskId = taskId;
@@ -330,7 +334,11 @@ async function viewTask(taskId) {
 
 async function editTask(taskId) {
   try {
-    const response = await requestJSON(`/api/laporan/${taskId}`);
+    const response = await requestJSON(`/api/laporan/${taskId}`,{
+      headers: {
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+            }
+    });
     const detail = transformLaporanToTask(response.data);
     populateEditForm(detail);
     document.getElementById("editModal")?.classList.add("active");
@@ -355,7 +363,9 @@ async function handleEditSubmit(event) {
   try {
     await requestJSON(`/api/laporan/${taskId}/status`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" ,
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+              },
       body: JSON.stringify({ status_laporan: statusText, komentar }),
     });
     showNotification("Status laporan berhasil diperbarui", "success");
