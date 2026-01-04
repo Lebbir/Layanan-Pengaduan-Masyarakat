@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const password = passwordInput.value;
 
         try {
-            const response = await fetch(`${window.API_BASE_URL || 'https://lapordesa-24qx2is2y-lebibirs-projects.vercel.app'}/api/warga/login`, {
+            const response = await fetch(`${window.API_BASE_URL || 'https://lapordesa-9zuo9qj2v-lebibirs-projects.vercel.app'}/api/warga/login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
